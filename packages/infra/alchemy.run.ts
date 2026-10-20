@@ -17,7 +17,7 @@ export const server = Cloudflare.Worker("server", {
     DATABASE_AUTH_TOKEN: Config.Redacted("DATABASE_AUTH_TOKEN"),
   },
   dev: {
-    port: 3000,
+    port: 3004,
   },
 });
 
@@ -41,7 +41,7 @@ export default Alchemy.Stack(
         VITE_SERVER_URL: serverWorker.url.as<string>(),
       },
       dev: {
-        port: 3001,
+        port: 3003,
       },
     });
 

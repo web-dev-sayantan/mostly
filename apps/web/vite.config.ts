@@ -6,7 +6,9 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   server: {
-    port: 3001,
+    allowedHosts: ["macbook.grouse-ph.ts.net"],
+    host: true,
+    port: 3003,
   },
   resolve: {
     tsconfigPaths: true,
