@@ -19,6 +19,7 @@ export function createAuth(
       provider: "sqlite",
       schema,
     }),
+    session: { modelName: "authSession" },
     trustedOrigins: [env.CORS_ORIGIN, ...desktopOrigins],
     emailAndPassword: { enabled: true },
     secret: env.BETTER_AUTH_SECRET,

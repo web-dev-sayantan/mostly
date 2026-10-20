@@ -16,8 +16,8 @@ export const user = sqliteTable("user", {
     .notNull(),
 });
 
-export const session = sqliteTable(
-  "session",
+export const authSession = sqliteTable(
+  "auth_session",
   {
     id: text("id").primaryKey(),
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
@@ -34,7 +34,7 @@ export const session = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
-  (table) => [index("session_userId_idx").on(table.userId)],
+  (table) => [index("auth_session_userId_idx").on(table.userId)],
 );
 
 export const account = sqliteTable(
@@ -85,27 +85,30 @@ export const verification = sqliteTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const authRelations = defineRelationsPart({ user, session, account, verification }, (r) => ({
-  user: {
-    sessions: r.many.session({
-      from: r.user.id,
-      to: r.session.userId,
-    }),
-    accounts: r.many.account({
-      from: r.user.id,
-      to: r.account.userId,
-    }),
-  },
-  session: {
-    user: r.one.user({
-      from: r.session.userId,
-      to: r.user.id,
-    }),
-  },
-  account: {
-    user: r.one.user({
-      from: r.account.userId,
-      to: r.user.id,
-    }),
-  },
-}));
+export const authRelations = defineRelationsPart(
+  { user, authSession, account, verification },
+  (r) => ({
+    user: {
+      sessions: r.many.authSession({
+        from: r.user.id,
+        to: r.authSession.userId,
+      }),
+      accounts: r.many.account({
+        from: r.user.id,
+        to: r.account.userId,
+      }),
+    },
+    authSession: {
+      user: r.one.user({
+        from: r.authSession.userId,
+        to: r.user.id,
+      }),
+    },
+    account: {
+      user: r.one.user({
+        from: r.account.userId,
+        to: r.user.id,
+      }),
+    },
+  }),
+);
