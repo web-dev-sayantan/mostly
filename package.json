@@ -1,0 +1,47 @@
+{
+  "name": "mostly",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "vp run -r dev",
+    "build": "vp run -r build",
+    "check-types": "vp run -r check-types",
+    "check": "vp check && vp run -r check-types",
+    "lint": "vp lint",
+    "format": "vp fmt",
+    "staged": "vp staged",
+    "hooks:setup": "vp config",
+    "dev:web": "vp run --filter web dev:bare",
+    "dev:server": "vp run --filter hono dev:bare",
+    "db:push": "vp run --filter @mostly/db db:push",
+    "db:studio": "vp run --filter @mostly/db db:studio",
+    "db:generate": "vp run --filter @mostly/db db:generate",
+    "db:migrate": "vp run --filter @mostly/db db:migrate",
+    "db:local": "vp run --filter @mostly/db db:local",
+    "deploy": "vp run --filter @mostly/infra deploy",
+    "destroy": "vp run --filter @mostly/infra destroy",
+    "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./apps/server/ && varlock codegen --path ./packages/db/",
+    "fix": "ultracite fix"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:",
+    "@mostly/config": "workspace:*",
+    "@types/node": "^26.4.1",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "rolldown": "1.2.13",
+    "typescript": "catalog:",
+    "ultracite": "8.0.0",
+    "varlock": "catalog:",
+    "vite-plus": "1.1.0"
+  },
+  "packageManager": "pnpm@12.14.0"
+}
