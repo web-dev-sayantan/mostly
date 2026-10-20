@@ -13,7 +13,9 @@ export const server = Cloudflare.Worker("server", {
     DATABASE_URL: Config.Redacted("DATABASE_URL"),
     CORS_ORIGIN: Config.String("CORS_ORIGIN"),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
-    BETTER_AUTH_URL: Cloudflare.Worker.URL,
+    // Dev is reached through Caddy, so Worker.URL (localhost) is not the public origin.
+    // shortcut: this also feeds deployed stages; switch back to Worker.URL for production.
+    BETTER_AUTH_URL: Config.String("BETTER_AUTH_URL"),
     GOOGLE_CLIENT_ID: Config.String("GOOGLE_CLIENT_ID"),
     GOOGLE_CLIENT_SECRET: Config.Redacted("GOOGLE_CLIENT_SECRET"),
     DATABASE_AUTH_TOKEN: Config.Redacted("DATABASE_AUTH_TOKEN"),
