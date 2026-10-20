@@ -4,9 +4,18 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vite-plus";
 
+// Caddy publishes the dev server over Tailscale HTTPS (see the Homebrew Caddyfile).
+const tailscaleHost = "macbook.grouse-ph.ts.net";
+
 export default defineConfig({
   server: {
-    allowedHosts: ["macbook.grouse-ph.ts.net"],
+    allowedHosts: [tailscaleHost],
+    cors: {
+      origin: [
+        `https://${tailscaleHost}:8083`,
+        /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/,
+      ],
+    },
     host: true,
     port: 3003,
   },
