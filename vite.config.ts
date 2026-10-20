@@ -9,6 +9,7 @@ export default defineConfig({
     ignorePatterns: [
       "node_modules/**",
       "**/node_modules/**",
+      ".agents/**",
       "apps/web/dist/**",
       "apps/web/.tanstack/**",
       "apps/web/src/routeTree.gen.ts",
@@ -30,6 +31,7 @@ export default defineConfig({
     ignorePatterns: [
       "node_modules/**",
       "**/node_modules/**",
+      ".agents/**",
       "apps/web/dist/**",
       "apps/web/.tanstack/**",
       "apps/web/src/routeTree.gen.ts",

@@ -11,10 +11,7 @@ export default defineConfig({
   server: {
     allowedHosts: [tailscaleHost],
     cors: {
-      origin: [
-        `https://${tailscaleHost}:8083`,
-        /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/,
-      ],
+      origin: [`https://${tailscaleHost}:8083`, /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/],
     },
     host: true,
     port: 3003,

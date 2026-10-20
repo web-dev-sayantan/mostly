@@ -23,7 +23,7 @@ It is not a task manager, a social habit game, or a productivity scoreboard. It 
 
 1. **The day closes in under 30 seconds.** One tap per goal. Details stay out of the way until asked for.
 2. **No shame mechanics.** A miss is information, not a moral failure. No red alarms, no "you lost your streak" pushes, no guilt copy. There are no rest days, skips, or neutral gaps: an expected day not done is a miss.
-3. **Honest math.** Never show a percentage built on thin data. Distinguish *missed*, *not scheduled*, and *no session*. No composite "life score."
+3. **Honest math.** Never show a percentage built on thin data. Distinguish _missed_, _not scheduled_, and _no session_. No composite "life score."
 4. **Private by default.** One user, no social layer, no leaderboards. Notes and moods never go into analytics.
 5. **Works before it syncs.** The daily loop writes locally first; the network is a backup, not a gate.
 6. **The app fits the day.** One reminder, quiet defaults, no engagement bait, no re-engagement spam.
@@ -50,21 +50,21 @@ It is not a task manager, a social habit game, or a productivity scoreboard. It 
 
 ## 4. Core concepts
 
-| Term | Definition |
-|---|---|
-| **Goal** | An ongoing practice you want to keep doing. Has a name, optional emoji/color, priority, cadence, and start date. |
-| **Cadence** | How often the goal is expected: **daily** (default), **specific weekdays**, or **N times per week**. |
-| **Expectation** | A goal × a logical day on which it is expected. Daily and weekday goals have daily expectations. Weekly-target goals have a weekly target, not daily expectations. |
-| **Logical day** | The user's local date, with a configurable rollover (default **4:00 AM**). A 1:30 AM session belongs to the previous day. |
-| **Session** | One done record per goal per logical day, with optional minutes, note, and mood. |
-| **Close the day** | The daily ritual of reviewing Today and marking what was done. |
-| **Miss** | An expected day with no session after rollover. Derived, not stored. It can be corrected only by adding a session within the 7-day window. |
-| **Extra** | A session on a day a daily/weekday goal was not expected. Counts as a session and minutes, but not toward consistency or streaks. Weekly-target goals have no extras: every session counts toward the weekly target. |
-| **Archive** | A terminal end to a goal. Expectations stop after the archive day; history is kept and read-only. There is no unarchive; create a new goal to resume. |
-| **Streak** | Consecutive expected units done: days for daily/weekday goals, weeks met for weekly-target goals. A miss breaks the current streak. |
-| **Streak era** | A period with the same cadence unit. Changing between daily/weekday and weekly target starts a new era and resets the current streak. |
-| **Consistency** | Done expected units ÷ expected units. Units are **days** for daily/weekday goals and **weeks** for weekly-target goals. |
-| **Progress** | The visual record. It shows the numbers, heatmaps, strips, and cards; it does not tell the user what they mean. |
+| Term              | Definition                                                                                                                                                                                                           |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Goal**          | An ongoing practice you want to keep doing. Has a name, optional emoji/color, priority, cadence, and start date.                                                                                                     |
+| **Cadence**       | How often the goal is expected: **daily** (default), **specific weekdays**, or **N times per week**.                                                                                                                 |
+| **Expectation**   | A goal × a logical day on which it is expected. Daily and weekday goals have daily expectations. Weekly-target goals have a weekly target, not daily expectations.                                                   |
+| **Logical day**   | The user's local date, with a configurable rollover (default **4:00 AM**). A 1:30 AM session belongs to the previous day.                                                                                            |
+| **Session**       | One done record per goal per logical day, with optional minutes, note, and mood.                                                                                                                                     |
+| **Close the day** | The daily ritual of reviewing Today and marking what was done.                                                                                                                                                       |
+| **Miss**          | An expected day with no session after rollover. Derived, not stored. It can be corrected only by adding a session within the 7-day window.                                                                           |
+| **Extra**         | A session on a day a daily/weekday goal was not expected. Counts as a session and minutes, but not toward consistency or streaks. Weekly-target goals have no extras: every session counts toward the weekly target. |
+| **Archive**       | A terminal end to a goal. Expectations stop after the archive day; history is kept and read-only. There is no unarchive; create a new goal to resume.                                                                |
+| **Streak**        | Consecutive expected units done: days for daily/weekday goals, weeks met for weekly-target goals. A miss breaks the current streak.                                                                                  |
+| **Streak era**    | A period with the same cadence unit. Changing between daily/weekday and weekly target starts a new era and resets the current streak.                                                                                |
+| **Consistency**   | Done expected units ÷ expected units. Units are **days** for daily/weekday goals and **weeks** for weekly-target goals.                                                                                              |
+| **Progress**      | The visual record. It shows the numbers, heatmaps, strips, and cards; it does not tell the user what they mean.                                                                                                      |
 
 **The important asymmetry:** weekly-target goals **never get a daily miss**. Their outcome is judged at the end of the week. A day with no session is simply "no session."
 
@@ -209,12 +209,12 @@ It is not a task manager, a social habit game, or a productivity scoreboard. It 
 
 Opened by tapping a done row or **Add details**. All fields optional.
 
-| Field | Behavior |
-|---|---|
-| **Minutes** | Integer 0–1440. Quick chips 15 / 30 / 45 / 60 plus a custom input. Represents total time, not a timer. |
-| **Note** | Plain text, max 500 characters. Private. One line grows to a small textarea. |
-| **Mood** | Single-select pills: **Great / Meh / Rough**. Optional; tap again to clear. |
-| **Status** | Footer action: **Mark as not done** (with confirmation). Today before rollover deletes the session; a past day within the window deletes the session and, if the day was expected, it becomes a derived Miss; an extra session is deleted. Outside 7 days, or on an archived goal, read-only. |
+| Field       | Behavior                                                                                                                                                                                                                                                                                      |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Minutes** | Integer 0–1440. Quick chips 15 / 30 / 45 / 60 plus a custom input. Represents total time, not a timer.                                                                                                                                                                                        |
+| **Note**    | Plain text, max 500 characters. Private. One line grows to a small textarea.                                                                                                                                                                                                                  |
+| **Mood**    | Single-select pills: **Great / Meh / Rough**. Optional; tap again to clear.                                                                                                                                                                                                                   |
+| **Status**  | Footer action: **Mark as not done** (with confirmation). Today before rollover deletes the session; a past day within the window deletes the session and, if the day was expected, it becomes a derived Miss; an extra session is deleted. Outside 7 days, or on an archived goal, read-only. |
 
 Details are available only for done sessions. A missed day can be changed to done by adding a session within the 7-day window.
 
@@ -282,14 +282,14 @@ Auto-save on change, debounced. Show "Saved" for a moment. Navigating away never
 
 **Goal editor:**
 
-| Field | Rules |
-|---|---|
-| Name | Required, 1–40 characters. |
-| Emoji | Optional; curated picker plus a neutral default. |
-| Color | Optional; six muted swatches. Used as an accent, never the only status signal. |
-| Priority | High / Medium / Low. Default Medium. Affects ordering only; it does **not** weight statistics. |
-| Cadence | **Daily** (default), **Specific days** (at least one weekday), or **N times per week** (1–7). Helper text explains each. |
-| Start date | Default today. After 9:30 PM local, default the next logical day. Future dates allowed; past dates not allowed. |
+| Field      | Rules                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Name       | Required, 1–40 characters.                                                                                               |
+| Emoji      | Optional; curated picker plus a neutral default.                                                                         |
+| Color      | Optional; six muted swatches. Used as an accent, never the only status signal.                                           |
+| Priority   | High / Medium / Low. Default Medium. Affects ordering only; it does **not** weight statistics.                           |
+| Cadence    | **Daily** (default), **Specific days** (at least one weekday), or **N times per week** (1–7). Helper text explains each. |
+| Start date | Default today. After 9:30 PM local, default the next logical day. Future dates allowed; past dates not allowed.          |
 
 **Cadence helper copy:**
 
@@ -528,38 +528,38 @@ user 1 ─── * goal 1 ─── * session
 
 ## 10. Rules & edge cases
 
-| Situation | Behavior |
-|---|---|
-| **Day rollover** | Default 4:00 AM local. 1:30 AM belongs to the previous logical day. Date boundaries use the user's timezone, not UTC. |
-| **Unmarked at rollover** | The day is a derived Miss for scheduled daily/weekday goals. No rows are created. Weekly targets get no daily miss. |
-| **New goal** | Starts on `start_date` (today or future; no past dates). After 9:30 PM local, the default is the next logical day. No expectations before it. |
-| **Backfill** | Last 7 logical days, including today. Future dates blocked. Older days read-only. Adding a session recomputes consistency and streaks. |
-| **Backfill into a completed week** | Allowed only when the edited date is within the 7-day window. Recompute the weekly outcome and streak; a missed week can flip to met. |
-| **Remove session** | Today before rollover: delete the session. Past within 7 days: delete it; if the day was expected, it becomes a derived Miss; an extra disappears. Outside 7 days: blocked. |
-| **Extra session** | Allowed on an off day via day detail / **Log something else**. Counts as a session and minutes; excluded from consistency and streaks. Weekly goals have no extras; every session counts toward N. |
-| **Weekly target met early** | Show "Target met." Allow another session. Additional sessions do not change the weekly outcome or streak. |
-| **Weekly target missed** | After the last logical day of a scored week, the week is missed if sessions < N. No per-day missed rows. |
-| **Partial week** | Active days in the week < N: not scored. Sessions still appear in history. Active days ≥ N: scored. |
-| **No neutral gaps** | There are no rest days or skips. An expected day not done is a miss. A 14-day absence produces 14 misses per daily goal and a fresh streak when logging resumes. |
-| **Archive** | Terminal. Archiving on day D sets `archived_on = D`; day D still counts. No expectations after that day. History is read-only from the next day; the 7-day window does not reopen it. No unarchive. Current cards/streaks/consistency exclude the goal; historical aggregates include its sessions for dates it was active. Create a new goal to resume. |
-| **Delete goal** | Permanent user-facing deletion of the goal, versions, sessions, and history. Confirm with a count; suggest export. Internal tombstone for sync; queued writes for the goal are rejected. |
-| **Timezone change** | Confirmed, not silent. Existing logical dates are unchanged; new days use the new timezone. A dateline jump may skip a date; skipped dates are not expectations and show no data. A repeated date keeps its existing session. |
-| **Two devices, same session** | Unique `(goal_id, logical_date)`. Last write wins per session; no duplicates. A losing offline edit is kept in a local 7-day conflict copy and surfaced as "Review sync conflict" in Account. |
-| **Offline** | Daily loop writes locally first, queues, retries with backoff. Goal management, archive, and settings require a connection. No blocking modal. Auth expiry: keep writes local, prompt on reconnect. |
-| **Sign out** | Sync unsynced changes first; warn if any remain; clear local cache. |
-| **Delete account while another device is offline** | Server tombstone rejects queued writes. The offline device discards them and clears local data on next sync. |
-| **Reminder** | At most one per user per logical day. Suppress if all done, no goals scheduled, or no active goals. No duplicate if the time or timezone changes later that day. |
-| **Notification denied / unsupported** | Show a one-time in-app note in Account; no repeated permission prompts. iOS requires an installed home-screen app and 16.4+. |
-| **Minutes** | Integer 0–1440. Zero allowed but treated as no meaningful duration. Only on done sessions. |
-| **Note** | Max 500 characters, plain text. Never logged or sent to analytics. |
-| **Mood** | Only on done sessions. Tap again to clear. |
-| **No active goals** | Today shows an empty state with "Add a goal"; reminder suppressed. |
-| **All goals archived** | "Nothing expected today." No reminder. |
-| **Editing after 7 days** | Blocked for sessions, minutes, note, mood, and status. The day is read-only. No catch-up flow. Archived history is read-only from the day after archiving, even within the 7-day window. |
-| **Week start change** | Takes effect next logical week. Past weeks keep their boundaries. The transition week is not scored. Current weekly streak resets. |
-| **Rollover change** | Takes effect at the next logical day boundary. The current day closes under the old rule. Past logical dates never move. |
-| **Schedule change** | Daily ↔ weekday effective tomorrow; any weekly-target change effective next week. One pending version per goal. Current streak resets only when the cadence unit changes. |
-| **Session before start / after archive** | Blocked. A goal cannot be logged before its start date or after its archive day (`logical_date > archived_on`). |
+| Situation                                          | Behavior                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Day rollover**                                   | Default 4:00 AM local. 1:30 AM belongs to the previous logical day. Date boundaries use the user's timezone, not UTC.                                                                                                                                                                                                                                    |
+| **Unmarked at rollover**                           | The day is a derived Miss for scheduled daily/weekday goals. No rows are created. Weekly targets get no daily miss.                                                                                                                                                                                                                                      |
+| **New goal**                                       | Starts on `start_date` (today or future; no past dates). After 9:30 PM local, the default is the next logical day. No expectations before it.                                                                                                                                                                                                            |
+| **Backfill**                                       | Last 7 logical days, including today. Future dates blocked. Older days read-only. Adding a session recomputes consistency and streaks.                                                                                                                                                                                                                   |
+| **Backfill into a completed week**                 | Allowed only when the edited date is within the 7-day window. Recompute the weekly outcome and streak; a missed week can flip to met.                                                                                                                                                                                                                    |
+| **Remove session**                                 | Today before rollover: delete the session. Past within 7 days: delete it; if the day was expected, it becomes a derived Miss; an extra disappears. Outside 7 days: blocked.                                                                                                                                                                              |
+| **Extra session**                                  | Allowed on an off day via day detail / **Log something else**. Counts as a session and minutes; excluded from consistency and streaks. Weekly goals have no extras; every session counts toward N.                                                                                                                                                       |
+| **Weekly target met early**                        | Show "Target met." Allow another session. Additional sessions do not change the weekly outcome or streak.                                                                                                                                                                                                                                                |
+| **Weekly target missed**                           | After the last logical day of a scored week, the week is missed if sessions < N. No per-day missed rows.                                                                                                                                                                                                                                                 |
+| **Partial week**                                   | Active days in the week < N: not scored. Sessions still appear in history. Active days ≥ N: scored.                                                                                                                                                                                                                                                      |
+| **No neutral gaps**                                | There are no rest days or skips. An expected day not done is a miss. A 14-day absence produces 14 misses per daily goal and a fresh streak when logging resumes.                                                                                                                                                                                         |
+| **Archive**                                        | Terminal. Archiving on day D sets `archived_on = D`; day D still counts. No expectations after that day. History is read-only from the next day; the 7-day window does not reopen it. No unarchive. Current cards/streaks/consistency exclude the goal; historical aggregates include its sessions for dates it was active. Create a new goal to resume. |
+| **Delete goal**                                    | Permanent user-facing deletion of the goal, versions, sessions, and history. Confirm with a count; suggest export. Internal tombstone for sync; queued writes for the goal are rejected.                                                                                                                                                                 |
+| **Timezone change**                                | Confirmed, not silent. Existing logical dates are unchanged; new days use the new timezone. A dateline jump may skip a date; skipped dates are not expectations and show no data. A repeated date keeps its existing session.                                                                                                                            |
+| **Two devices, same session**                      | Unique `(goal_id, logical_date)`. Last write wins per session; no duplicates. A losing offline edit is kept in a local 7-day conflict copy and surfaced as "Review sync conflict" in Account.                                                                                                                                                            |
+| **Offline**                                        | Daily loop writes locally first, queues, retries with backoff. Goal management, archive, and settings require a connection. No blocking modal. Auth expiry: keep writes local, prompt on reconnect.                                                                                                                                                      |
+| **Sign out**                                       | Sync unsynced changes first; warn if any remain; clear local cache.                                                                                                                                                                                                                                                                                      |
+| **Delete account while another device is offline** | Server tombstone rejects queued writes. The offline device discards them and clears local data on next sync.                                                                                                                                                                                                                                             |
+| **Reminder**                                       | At most one per user per logical day. Suppress if all done, no goals scheduled, or no active goals. No duplicate if the time or timezone changes later that day.                                                                                                                                                                                         |
+| **Notification denied / unsupported**              | Show a one-time in-app note in Account; no repeated permission prompts. iOS requires an installed home-screen app and 16.4+.                                                                                                                                                                                                                             |
+| **Minutes**                                        | Integer 0–1440. Zero allowed but treated as no meaningful duration. Only on done sessions.                                                                                                                                                                                                                                                               |
+| **Note**                                           | Max 500 characters, plain text. Never logged or sent to analytics.                                                                                                                                                                                                                                                                                       |
+| **Mood**                                           | Only on done sessions. Tap again to clear.                                                                                                                                                                                                                                                                                                               |
+| **No active goals**                                | Today shows an empty state with "Add a goal"; reminder suppressed.                                                                                                                                                                                                                                                                                       |
+| **All goals archived**                             | "Nothing expected today." No reminder.                                                                                                                                                                                                                                                                                                                   |
+| **Editing after 7 days**                           | Blocked for sessions, minutes, note, mood, and status. The day is read-only. No catch-up flow. Archived history is read-only from the day after archiving, even within the 7-day window.                                                                                                                                                                 |
+| **Week start change**                              | Takes effect next logical week. Past weeks keep their boundaries. The transition week is not scored. Current weekly streak resets.                                                                                                                                                                                                                       |
+| **Rollover change**                                | Takes effect at the next logical day boundary. The current day closes under the old rule. Past logical dates never move.                                                                                                                                                                                                                                 |
+| **Schedule change**                                | Daily ↔ weekday effective tomorrow; any weekly-target change effective next week. One pending version per goal. Current streak resets only when the cadence unit changes.                                                                                                                                                                                |
+| **Session before start / after archive**           | Blocked. A goal cannot be logged before its start date or after its archive day (`logical_date > archived_on`).                                                                                                                                                                                                                                          |
 
 ---
 
@@ -628,15 +628,15 @@ user 1 ─── * goal 1 ─── * session
 
 **Palette (light):**
 
-| Token | Value | Use |
-|---|---|---|
-| Paper | `#F7F4EE` | Background |
-| Ink | `#1C1B18` | Primary text |
-| Muted | `#6B675E` | Secondary text |
-| Line | `#E2DCD0` | Borders/dividers |
-| Accent | `#3E6B57` | Done, primary actions |
-| Accent soft | `#DCE7DF` | Selected/soft fills |
-| Warm | `#C98A3D` | Weekly progress / sparing emphasis |
+| Token       | Value     | Use                                |
+| ----------- | --------- | ---------------------------------- |
+| Paper       | `#F7F4EE` | Background                         |
+| Ink         | `#1C1B18` | Primary text                       |
+| Muted       | `#6B675E` | Secondary text                     |
+| Line        | `#E2DCD0` | Borders/dividers                   |
+| Accent      | `#3E6B57` | Done, primary actions              |
+| Accent soft | `#DCE7DF` | Selected/soft fills                |
+| Warm        | `#C98A3D` | Weekly progress / sparing emphasis |
 
 **Palette (dark):** background `#141512`, surface `#1C1E19`, ink `#EDE9DF`, muted `#9A9588`, line `#2A2C27`, accent `#8FBFA5`.
 
@@ -678,36 +678,36 @@ user 1 ─── * goal 1 ─── * session
 
 ## 15. Copy & tone
 
-| Context | Copy |
-|---|---|
-| Tagline | "A quiet record of what you did." |
-| Today header | "Tuesday, 20 October" |
-| Today header, late night | "Tuesday · still open until 4 AM" (default rollover) |
-| Progress | "3 of 5 done" |
-| Weekly goal | "2 of 4 this week" / "Target met" |
-| Done toast | "Done. Undo" |
-| Partial day | Header shows "3 of 5 done"; no per-tap toast |
-| All done | "That's the day. 5 of 5." |
-| Nothing scheduled | "Nothing scheduled today." |
-| No goals | "Add the first thing you want to keep doing." |
-| Details | "Add details" / "Minutes" / "Note (optional)" / "How did it feel?" |
-| Mood labels | "Great" / "Meh" / "Rough" |
-| Saved | "Saved" |
-| Missed | "Missed" |
-| Weekly no session | "No session" |
-| Weekly not scored | "Not enough days this week" |
-| Streak | "12 days in a row" / "Best: 18 days" / "No streak yet" |
-| Backfill | "Past 7 days" / "You can edit the last 7 days." |
-| Read-only | "This day is read-only." |
-| Reminder permission | "One reminder a day. No streak guilt, no spam." |
-| Reminder | "2 goals left today. Close the day when you're ready." |
-| Progress empty | "Progress fills in after a week." |
-| Export | "Download a copy of everything." |
-| Archive goal | "Ends this goal. History is kept and read-only from the next day. Correct details before archiving. You can't unarchive; create a new goal to resume." |
-| Delete goal | "This deletes Reading and all 84 sessions. Export your data first?" |
-| Delete account | "This removes your account and every session. This can't be undone." |
-| Sign out | "Sign out and clear this device?" |
-| Install | "Add Mostly to your home screen." |
+| Context                  | Copy                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tagline                  | "A quiet record of what you did."                                                                                                                      |
+| Today header             | "Tuesday, 20 October"                                                                                                                                  |
+| Today header, late night | "Tuesday · still open until 4 AM" (default rollover)                                                                                                   |
+| Progress                 | "3 of 5 done"                                                                                                                                          |
+| Weekly goal              | "2 of 4 this week" / "Target met"                                                                                                                      |
+| Done toast               | "Done. Undo"                                                                                                                                           |
+| Partial day              | Header shows "3 of 5 done"; no per-tap toast                                                                                                           |
+| All done                 | "That's the day. 5 of 5."                                                                                                                              |
+| Nothing scheduled        | "Nothing scheduled today."                                                                                                                             |
+| No goals                 | "Add the first thing you want to keep doing."                                                                                                          |
+| Details                  | "Add details" / "Minutes" / "Note (optional)" / "How did it feel?"                                                                                     |
+| Mood labels              | "Great" / "Meh" / "Rough"                                                                                                                              |
+| Saved                    | "Saved"                                                                                                                                                |
+| Missed                   | "Missed"                                                                                                                                               |
+| Weekly no session        | "No session"                                                                                                                                           |
+| Weekly not scored        | "Not enough days this week"                                                                                                                            |
+| Streak                   | "12 days in a row" / "Best: 18 days" / "No streak yet"                                                                                                 |
+| Backfill                 | "Past 7 days" / "You can edit the last 7 days."                                                                                                        |
+| Read-only                | "This day is read-only."                                                                                                                               |
+| Reminder permission      | "One reminder a day. No streak guilt, no spam."                                                                                                        |
+| Reminder                 | "2 goals left today. Close the day when you're ready."                                                                                                 |
+| Progress empty           | "Progress fills in after a week."                                                                                                                      |
+| Export                   | "Download a copy of everything."                                                                                                                       |
+| Archive goal             | "Ends this goal. History is kept and read-only from the next day. Correct details before archiving. You can't unarchive; create a new goal to resume." |
+| Delete goal              | "This deletes Reading and all 84 sessions. Export your data first?"                                                                                    |
+| Delete account           | "This removes your account and every session. This can't be undone."                                                                                   |
+| Sign out                 | "Sign out and clear this device?"                                                                                                                      |
+| Install                  | "Add Mostly to your home screen."                                                                                                                      |
 
 **Tone rules:**
 
@@ -749,21 +749,21 @@ This is a personal tool, so success is retention and honesty, not growth. V1 has
 No dates or stack assumptions; sequence only.
 
 1. **Foundations:** schema, auth (Google OIDC only), goal CRUD, schedule versions, archive, user setting versions, API-level user scoping.
-   *Done when:* create/edit/archive/delete works and the data model answers "what was expected on date X, under the settings in effect then?"
+   _Done when:_ create/edit/archive/delete works and the data model answers "what was expected on date X, under the settings in effect then?"
 2. **Offline sync contract:** its own ticket, not a slice of foundations — local store shape, session write queue, tombstone and last-write-wins rules, idempotent replay, conflict notice, and sync-status surface. This is the widest piece in v1 and the most expensive to retrofit.
-   *Done when:* a session written offline, replayed twice, and edited from two devices leaves one live row, resurrects nothing, and loses nothing silently.
+   _Done when:_ a session written offline, replayed twice, and edited from two devices leaves one live row, resurrects nothing, and loses nothing silently.
 3. **Today + session:** list, one-tap done, undo, details, optimistic local writes.
-   *Done when:* the core loop works offline and feels instant.
+   _Done when:_ the core loop works offline and feels instant.
 4. **Time logic:** logical day, rollover, derived misses, 7-day write window, day detail.
-   *Done when:* boundary tests pass and no miss rows are generated.
+   _Done when:_ boundary tests pass and no miss rows are generated.
 5. **Stats:** consistency, streaks and eras, weekly outcomes, archive handling.
-   *Done when:* formulas match the spec across start/archive boundaries, off days, and cadence changes.
+   _Done when:_ formulas match the spec across start/archive boundaries, off days, and cadence changes.
 6. **Progress:** heatmap, weekly strip, goal cards, thresholds and empty states.
-   *Done when:* no misleading percentages appear below the thresholds, and there are no prose insights.
+   _Done when:_ no misleading percentages appear below the thresholds, and there are no prose insights.
 7. **PWA + reminder:** manifest, install UX, offline cache, sync queue status, push subscriptions, delivery log, scheduler, permission sequencing.
-   *Done when:* install, offline sync, and at-most-one push per logical day work on iOS Safari and Android Chrome.
+   _Done when:_ install, offline sync, and at-most-one push per logical day work on iOS Safari and Android Chrome.
 8. **Polish:** onboarding, Account, export/delete, dark mode, accessibility, copy.
-   *Done when:* the acceptance criteria below pass.
+   _Done when:_ the acceptance criteria below pass.
 9. **v1.1:** minimum version, month calendar, CSV, custom mood labels, badge, shortcut.
 
 **Test seams:** two. Time and stats logic — logical day, rollover, week boundary, schedule resolution, derived misses, streak eras, consistency — lives in pure functions that take an injected clock and timezone, tested directly. Everything with a database or user boundary — goal and session APIs, user scoping, and sync replay and conflicts — is tested through the oRPC boundary against an in-memory libsql database. UI tests are not the default; reserve one for a flow that cannot be verified below it.
@@ -795,26 +795,26 @@ No dates or stack assumptions; sequence only.
 
 Defaults are chosen; change any that no longer fit.
 
-| # | Decision | Default | Status |
-|---|---|---|---|
-| 1 | App name | **Mostly** (placeholder) | Open |
-| 2 | Week starts | **Monday**; changes next week | Resolved |
-| 3 | Day rollover | **4:00 AM local**; changes next logical day | Resolved |
-| 4 | Reminder | **9:30 PM local, one per day, real web push** | Resolved |
-| 5 | Priority | **High / Medium / Low**, ordering only | Resolved |
-| 6 | Neutral gaps | **None**: no rest or skip | Resolved |
-| 7 | Archive | **Terminal**, no unarchive | Resolved |
-| 8 | Misses | **Derived**, not stored | Resolved |
-| 9 | Offline scope | **Daily loop only**; goal edits need network | Resolved |
-| 10 | Streaks | **Per goal, per era, native unit; no ranking** | Resolved |
-| 11 | Edit window | **7 logical days for status and details**; no catch-up | Resolved |
-| 12 | Progress | **Visual record only**; no prose insights in v1 | Resolved |
-| 13 | Mood labels | **Great / Meh / Rough** | Resolved |
-| 14 | Narrative insights / weekly review | **Later** | Deferred |
-| 15 | Minimum version field | **v1.1** | Deferred |
-| 16 | Backup retention | **30 days** | Resolved |
-| 17 | Account recovery | **None**; Google-only, export is the backup | Resolved |
-| 18 | Time settings | **Prospective with effective-dated history** | Resolved |
+| #   | Decision                           | Default                                                | Status   |
+| --- | ---------------------------------- | ------------------------------------------------------ | -------- |
+| 1   | App name                           | **Mostly** (placeholder)                               | Open     |
+| 2   | Week starts                        | **Monday**; changes next week                          | Resolved |
+| 3   | Day rollover                       | **4:00 AM local**; changes next logical day            | Resolved |
+| 4   | Reminder                           | **9:30 PM local, one per day, real web push**          | Resolved |
+| 5   | Priority                           | **High / Medium / Low**, ordering only                 | Resolved |
+| 6   | Neutral gaps                       | **None**: no rest or skip                              | Resolved |
+| 7   | Archive                            | **Terminal**, no unarchive                             | Resolved |
+| 8   | Misses                             | **Derived**, not stored                                | Resolved |
+| 9   | Offline scope                      | **Daily loop only**; goal edits need network           | Resolved |
+| 10  | Streaks                            | **Per goal, per era, native unit; no ranking**         | Resolved |
+| 11  | Edit window                        | **7 logical days for status and details**; no catch-up | Resolved |
+| 12  | Progress                           | **Visual record only**; no prose insights in v1        | Resolved |
+| 13  | Mood labels                        | **Great / Meh / Rough**                                | Resolved |
+| 14  | Narrative insights / weekly review | **Later**                                              | Deferred |
+| 15  | Minimum version field              | **v1.1**                                               | Deferred |
+| 16  | Backup retention                   | **30 days**                                            | Resolved |
+| 17  | Account recovery                   | **None**; Google-only, export is the backup            | Resolved |
+| 18  | Time settings                      | **Prospective with effective-dated history**           | Resolved |
 
 ---
 
@@ -834,4 +834,4 @@ Defaults are chosen; change any that no longer fit.
 
 ---
 
-*End of spec.*
+_End of spec._

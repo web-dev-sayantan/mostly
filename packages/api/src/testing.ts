@@ -7,7 +7,7 @@ import type { Context } from "./context";
 /** Insert a real user and session row, returning the context session a sign-in would produce. */
 export const createTestUser = async (
   db: Database,
-  overrides: { email?: string; name?: string } = {}
+  overrides: { email?: string; name?: string } = {},
 ): Promise<Session> => {
   const now = new Date();
   const id = crypto.randomUUID();
@@ -44,7 +44,7 @@ export const createTestUser = async (
   return { user: createdUser, session: createdSession };
 };
 
-export const createTestContext = (
-  db: Database,
-  session: Session | null
-): Context => ({ db, session });
+export const createTestContext = (db: Database, session: Session | null): Context => ({
+  db,
+  session,
+});

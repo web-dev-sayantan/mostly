@@ -34,14 +34,9 @@ const localParts = (instant: Date, timeZone: string) => {
 };
 
 /** The logical day an instant belongs to, under the user's time and rollover settings. */
-export const logicalDate = (
-  instant: Date,
-  { timeZone, rolloverHour }: TimeSettings
-): string => {
+export const logicalDate = (instant: Date, { timeZone, rolloverHour }: TimeSettings): string => {
   const { year, month, day, hour } = localParts(instant, timeZone);
   const offset = hour < rolloverHour ? -1 : 0;
 
-  return new Date(Date.UTC(year, month - 1, day) + offset * MS_PER_DAY)
-    .toISOString()
-    .slice(0, 10);
+  return new Date(Date.UTC(year, month - 1, day) + offset * MS_PER_DAY).toISOString().slice(0, 10);
 };
