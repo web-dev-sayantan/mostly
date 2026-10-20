@@ -79,6 +79,16 @@ import { Button } from "@mostly/ui/components/button";
 
 If you want to add app-specific blocks instead of shared primitives, run the shadcn CLI from `apps/web`.
 
+## Sign-in
+
+Google is the only sign-in method. Create a Google OAuth web client and add
+`https://<server-origin>/api/auth/callback/google` as an authorized redirect URI, then set
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `apps/server/.env`. Only `openid`, `email`, and
+`profile` scopes are requested.
+
+On an iOS standalone PWA the OAuth page opens in the system browser and returns to `/today`, so
+the sign-in flow finishes outside the installed app.
+
 ## Environment Configuration
 
 Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `pnpm run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.

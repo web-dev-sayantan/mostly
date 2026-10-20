@@ -2,8 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F7F4EE" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <title>mostly</title>
+    <script>
+      // Apply the stored theme before first paint so there is no flash.
+      // Keep the storage key in sync with ThemeProvider in routes/__root.tsx.
+      (() => {
+        try {
+          const stored = localStorage.getItem("mostly-theme");
+          const dark =
+            stored === "dark" ||
+            ((!stored || stored === "system") &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", dark);
+          document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute("content", dark ? "#141512" : "#F7F4EE");
+        } catch {
+          // Storage can be unavailable in private modes; fall back to CSS defaults.
+        }
+      })();
+    </script>
   </head>
 
   <body>

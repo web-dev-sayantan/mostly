@@ -32,8 +32,9 @@ export default defineConfig({
       manifest: {
         name: "mostly",
         short_name: "mostly",
-        description: "mostly - PWA Application",
-        theme_color: "#0c0c0c",
+        description: "A quiet record of what you did.",
+        background_color: "#F7F4EE",
+        theme_color: "#F7F4EE",
       },
       pwaAssets: { disabled: false, config: true },
       devOptions: { enabled: true },
