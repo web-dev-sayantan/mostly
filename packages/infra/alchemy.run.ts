@@ -42,7 +42,9 @@ export default Alchemy.Stack(
         notFoundHandling: "single-page-application",
       },
       env: {
-        VITE_SERVER_URL: serverWorker.url.as<string>(),
+        // Dev is reached through Caddy, so the server's local dev URL is not public.
+        // shortcut: this also feeds deployed stages; switch back to serverWorker.url for production.
+        VITE_SERVER_URL: Config.String("VITE_SERVER_URL"),
       },
       dev: {
         port: 3003,
