@@ -1,0 +1,16 @@
+{
+  "name": "@mostly/domain",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "check-types": "tsc -b"
+  },
+  "devDependencies": {
+    "@mostly/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

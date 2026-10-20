@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "dev": "vp run -r dev",
+    "test": "vp test",
     "build": "vp run -r build",
     "check-types": "vp run -r check-types",
     "check": "vp check && vp run -r check-types",
