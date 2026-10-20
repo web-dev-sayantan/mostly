@@ -1,15 +1,15 @@
-# Tally — Product Spec
+# Mostly — Product Spec
 
 **A quiet record of what you did.**
 
 Status: Draft v0.1 · 20 Oct 2026 · Single-user personal web app / PWA
-Working name: **Tally** (placeholder — see Open Decisions)
+Working name: **Mostly** (placeholder — see Open Decisions)
 
 ---
 
 ## 1. Summary
 
-Tally answers one question at the end of the day: **what did I do, and what did I miss?**
+Mostly answers one question at the end of the day: **what did I do, and what did I miss?**
 
 You keep a short list of goals — reading, guitar, singing, coding, whatever matters — and mark each one with a single tap. Minutes, a note, and a quick feeling are optional. A dashboard then shows the honest pattern over time: consistency, streaks, best days, and how quickly you bounce back after a miss.
 
@@ -341,7 +341,7 @@ Grouped sections, no dashboard clutter:
 - **Reminder:** on/off, time (default 9:30 PM local), permission status, **Send test notification**.
 - **Preferences:** week starts Monday/Sunday; day rollover (default 4:00 AM, advanced); timezone displayed; theme (system/light/dark). Changing week start or rollover can move the current day/week; confirm before saving.
 - **Data:** export JSON; last sync time; **Sign out**; **Delete account**.
-- **Install:** "Add Tally to your home screen" with platform-specific instructions if not installed.
+- **Install:** "Add Mostly to your home screen" with platform-specific instructions if not installed.
 - **Privacy:** short plain-language statement and a link to the full policy.
 - **About:** version, open-source licenses.
 
@@ -647,8 +647,8 @@ user 1 ─── * goal 1 ─── * check_in
 
 | Context | Copy |
 |---|---|
-| Tagline | "A quiet record of what you did." |
-| Today header | "Tuesday, 20 October" |
+| Tagline | "You plan, you do, do you miss too?" |
+| Today header | "Tue, 20 Oct" |
 | Progress | "3 of 5 done" |
 | Weekly goal | "2 of 4 this week" / "Target met" |
 | Done toast | "Done. Undo" |
@@ -672,7 +672,7 @@ user 1 ─── * goal 1 ─── * check_in
 | Delete goal | "This deletes Reading and all 84 check-ins. Export your data first?" |
 | Delete account | "This removes your account and every check-in. This can't be undone." |
 | Sign out | "Sign out and clear this device?" |
-| Install | "Add Tally to your home screen." |
+| Install | "Add Mostly to your home screen." |
 
 **Tone rules:**
 
@@ -680,7 +680,7 @@ user 1 ─── * goal 1 ─── * check_in
 - Use "today pending," not "at risk" or "don't break it."
 - No exclamation marks in system messages.
 - Never imply the app is disappointed in the user.
-- The mood label "Pathetic" is the user's own wording, not the app's judgment. If it starts to read as shame rather than honesty, offer a rename to "Rough" (see Open Decisions).
+- The mood label "Pathetic" to be replaced by "Rough".
 
 ---
 
@@ -752,14 +752,14 @@ Defaults are already chosen in this spec. Change any that don't fit.
 
 | # | Decision | Default | Why it matters |
 |---|---|---|---|
-| 1 | App name | **Tally** (placeholder) | Easy to change before the manifest and icon exist. |
+| 1 | App name | **Mostly** (placeholder) | Easy to change before the manifest and icon exist. |
 | 2 | Week starts | **Monday** | Affects weekly targets, current week, and streaks. Sunday is a one-setting change. |
 | 3 | Day rollover | **4:00 AM local** | Late-night check-ins count for the day you were living. |
 | 4 | Reminder | **9:30 PM local, one per day** | Low noise; suppress when done. |
 | 5 | Priority | **High / Medium / Low**, ordering only | Keeps stats honest; no weighting. |
 | 6 | Pause | **In v1** | Vacations and illness shouldn't wreck history or streaks. |
 | 7 | Rest/skip state | **None in v1** | Binary done/missed plus pause. A third state can inflate stats and complicate the daily decision. |
-| 8 | Mood label | **Great / Meh / Pathetic** | Kept as requested. If "Pathetic" feels harsher than useful in daily use, rename to "Rough" later. |
+| 8 | Mood label | **Great / Meh / Rough** | . More subtle ones can be added later. |
 | 9 | Weekly review | **v1.1, in-app only** | Honors the one-reminder choice; no extra push. |
 | 10 | Minimum version field | **v1.1** | A useful fallback for rough days, but not needed to prove the core loop. |
 
