@@ -38,10 +38,10 @@ pnpm run db:local
 
 2. Update your `.env` file in the `apps/server` directory with the appropriate connection details if needed.
 
-3. Apply the schema to your database:
+3. Apply the committed migrations to your database:
 
 ```bash
-pnpm run db:push
+pnpm run db:migrate
 ```
 
 Then, run the development server:
