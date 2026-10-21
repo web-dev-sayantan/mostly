@@ -11,7 +11,10 @@ export default defineConfig({
   server: {
     allowedHosts: [tailscaleHost],
     cors: {
-      origin: [`https://${tailscaleHost}:8083`, /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/],
+      origin: [
+        `https://${tailscaleHost}:8083`,
+        /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/u,
+      ],
     },
     host: true,
     port: 3003,
@@ -28,13 +31,30 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      workbox: { globPatterns: ["**/*.{js,css,html,png,svg,ico}"] },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,png,svg,ico,webmanifest}"],
+        navigateFallback: "/index.html",
+      },
       manifest: {
-        name: "mostly",
-        short_name: "mostly",
+        id: "/",
+        name: "Mostly",
+        short_name: "Mostly",
         description: "A quiet record of what you did.",
+        start_url: "/today",
+        scope: "/",
+        display: "standalone",
         background_color: "#F7F4EE",
         theme_color: "#F7F4EE",
+        icons: [
+          { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
+          { src: "pwa-512x512.png", sizes: "512x512", type: "image/png" },
+          {
+            src: "maskable-icon-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+        ],
       },
       pwaAssets: { disabled: false, config: true },
       devOptions: { enabled: true },

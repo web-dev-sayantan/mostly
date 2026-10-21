@@ -20,6 +20,7 @@ export const OFFLINE_STORAGE_KEYS = {
   conflicts: "mostly:sync-conflicts",
   meta: "mostly:sync-meta",
   days: "mostly:day-cache",
+  auth: "mostly:auth-known",
 } as const;
 
 export interface LocalSession {
