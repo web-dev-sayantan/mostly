@@ -25,6 +25,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 
 import type { PushSender, PushSubscriptionRecord } from "./push";
 import { PushSendError } from "./push";
+import { loadHistory, resolveCurrent } from "./routers/settings";
 
 type GoalRow = typeof goal.$inferSelect;
 type ScheduleRow = typeof goalScheduleVersion.$inferSelect;
@@ -47,6 +48,34 @@ const settingsOf = (row: typeof user.$inferSelect): ReminderSettings => ({
   rolloverHour: row.dayRolloverHour,
   weekStartsOn: row.weekStartsOn,
 });
+
+/** Use the effective setting version, not just the cache, so future-dated changes land. */
+const currentSettingsOf = async (
+  db: Database,
+  row: typeof user.$inferSelect,
+  now: Date
+): Promise<ReminderSettings> => {
+  const history = await loadHistory(db, row.id);
+  if (history.length === 0) {
+    return settingsOf(row);
+  }
+
+  const cached = row.timeZone
+    ? {
+        timeZone: row.timeZone,
+        weekStartsOn: row.weekStartsOn,
+        dayRolloverHour: row.dayRolloverHour,
+      }
+    : null;
+  const { current } = resolveCurrent(history, now, cached);
+  return {
+    enabled: row.reminderEnabled,
+    time: row.reminderTime,
+    timeZone: current.timeZone,
+    rolloverHour: current.dayRolloverHour,
+    weekStartsOn: current.weekStartsOn,
+  };
+};
 
 const loadSnapshot = async (
   db: Database,
@@ -180,7 +209,7 @@ export const runReminders = async ({
     .where(eq(user.reminderEnabled, true));
 
   for (const row of users) {
-    const settings = settingsOf(row);
+    const settings = await currentSettingsOf(db, row, now);
     const due = isReminderDue({ now, settings, deliveredDates: [] });
     if (!due.due) {
       continue;
@@ -391,7 +420,7 @@ export const getReminderOverview = async ({
   if (!row) {
     throw new Error("Reminder user not found");
   }
-  const settings = settingsOf(row);
+  const settings = await currentSettingsOf(db, row, now);
   const today = logicalDate(now, {
     timeZone: settings.timeZone,
     rolloverHour: settings.rolloverHour,

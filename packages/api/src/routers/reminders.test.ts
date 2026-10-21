@@ -6,6 +6,7 @@ import {
   reminderDelivery,
 } from "@mostly/db/schema/reminders";
 import { session } from "@mostly/db/schema/sessions";
+import { userSettingVersion } from "@mostly/db/schema/settings";
 import { createTestDb } from "@mostly/db/testing";
 import { createRouterClient } from "@orpc/server";
 import { eq } from "drizzle-orm";
@@ -232,6 +233,34 @@ describe("reminder delivery", () => {
     expect(await db.select().from(reminderDelivery)).toHaveLength(1);
   });
 
+  it("uses the effective timezone version, not only the cache", async () => {
+    const alice = await createTestUser(db);
+    await enableReminder(db, alice.user.id, { time: "08:00" });
+    await createGoal(db, alice.user.id);
+    await createSubscription(db, alice.user.id);
+    await db.insert(userSettingVersion).values({
+      id: crypto.randomUUID(),
+      userId: alice.user.id,
+      effectiveFrom: "2026-10-22",
+      timeZone: "Pacific/Kiritimati",
+      weekStartsOn: 1,
+      dayRolloverHour: 4,
+      createdAt: NOW,
+    });
+
+    await runReminders({
+      db,
+      now: NOW,
+      sender: { send: () => Promise.resolve() },
+    });
+
+    const [delivery] = await db.select().from(reminderDelivery);
+    expect(delivery).toMatchObject({
+      logicalDate: "2026-10-23",
+      status: "sent",
+    });
+  });
+
   it("revokes subscriptions and deliveries when the account is deleted", async () => {
     const alice = await createTestUser(db, { email: "alice@example.com" });
     const bob = await createTestUser(db, { email: "bob@example.com" });
@@ -306,5 +335,33 @@ describe("reminder subscription routes", () => {
     ).resolves.toEqual({ revoked: true });
     const [row] = await db.select().from(pushSubscription);
     expect(row?.revokedAt).toEqual(NOW);
+  });
+
+  it("lets a new account reuse a revoked browser endpoint", async () => {
+    const alice = await createTestUser(db, { email: "alice@example.com" });
+    const bob = await createTestUser(db, { email: "bob@example.com" });
+    const endpoint = "https://push.example.com/shared-browser";
+    await createSubscription(db, alice.user.id, {
+      endpoint,
+      revokedAt: NOW,
+    });
+    const bobClient = createRouterClient(appRouter, {
+      context: createTestContext(db, bob, () => NOW),
+    });
+
+    const registered = await bobClient.reminders.subscription.register({
+      endpoint,
+      p256dh: "bob-key",
+      auth: "bob-secret",
+    });
+
+    expect(registered.id).not.toBeUndefined();
+    expect(await db.select().from(pushSubscription)).toEqual([
+      expect.objectContaining({
+        id: registered.id,
+        userId: bob.user.id,
+        revokedAt: null,
+      }),
+    ]);
   });
 });

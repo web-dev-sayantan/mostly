@@ -36,7 +36,10 @@ export const TodayReminderFallback = () => {
   }, []);
 
   const overview = overviewQuery.data;
-  const pushReady = permission === "granted" && endpoint !== null;
+  const pushReady =
+    Boolean(overview?.configured) &&
+    permission === "granted" &&
+    endpoint !== null;
   const canStillEnable =
     Boolean(overview?.configured) &&
     permission === "default" &&

@@ -94,10 +94,15 @@ export const remindersRouter = {
           .where(eq(pushSubscription.endpoint, input.endpoint));
 
         if (existing && existing.userId !== userId) {
-          throw new ORPCError("NOT_FOUND");
-        }
-
-        if (existing) {
+          if (!existing.revokedAt) {
+            throw new ORPCError("NOT_FOUND");
+          }
+          // A revoked row from a previous account on this browser should not
+          // block the new owner of the same endpoint.
+          await context.db
+            .delete(pushSubscription)
+            .where(eq(pushSubscription.id, existing.id));
+        } else if (existing) {
           await context.db
             .update(pushSubscription)
             .set({
