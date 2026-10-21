@@ -2,7 +2,7 @@ import { goal } from "@mostly/db/schema/goals";
 import { session } from "@mostly/db/schema/sessions";
 import type { ProgressResult } from "@mostly/domain";
 import { buildProgress } from "@mostly/domain";
-import { and, asc, eq, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure } from "../procedures";
@@ -32,17 +32,22 @@ export const progressRouter = {
       const goalDtos = await Promise.all(
         goalRows.map((row) => loadGoalDto(context.db, row))
       );
-      const sessions = await context.db
-        .select()
-        .from(session)
-        .where(
-          and(
-            eq(session.userId, userId),
-            isNull(session.deletedAt),
-            lte(session.logicalDate, clock.today)
-          )
-        )
-        .orderBy(asc(session.logicalDate));
+      const goalIds = goalRows.map((row) => row.id);
+      const sessions =
+        goalIds.length === 0
+          ? []
+          : await context.db
+              .select()
+              .from(session)
+              .where(
+                and(
+                  eq(session.userId, userId),
+                  isNull(session.deletedAt),
+                  inArray(session.goalId, goalIds),
+                  lte(session.logicalDate, clock.today)
+                )
+              )
+              .orderBy(asc(session.logicalDate));
 
       return buildProgress({
         goals: goalDtos.toSorted(
