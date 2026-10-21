@@ -26,12 +26,32 @@ const storage = (): Storage | null => {
   }
 };
 
+const isGoal = (value: unknown): value is GoalDto => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const goal = value as Partial<GoalDto>;
+  return (
+    typeof goal.id === "string" &&
+    typeof goal.name === "string" &&
+    typeof goal.startDate === "string" &&
+    typeof goal.createdAt === "string" &&
+    typeof goal.priority === "string" &&
+    Array.isArray(goal.scheduleVersions)
+  );
+};
+
 const isGoalList = (value: unknown): value is CachedGoals => {
   if (typeof value !== "object" || value === null) {
     return false;
   }
   const list = value as Partial<CachedGoals>;
-  return Array.isArray(list.active) && Array.isArray(list.archived);
+  return (
+    Array.isArray(list.active) &&
+    list.active.every(isGoal) &&
+    Array.isArray(list.archived) &&
+    list.archived.every(isGoal)
+  );
 };
 
 const isSettingHistory = (value: unknown): value is SettingVersion[] =>
@@ -87,4 +107,12 @@ export const writeSettingsCache = (
   history: readonly SettingVersion[]
 ): void => {
   writeTodayCache({ ...readTodayCache(), settings: [...history] });
+};
+
+export const clearTodayCache = (): void => {
+  try {
+    storage()?.removeItem(CACHE_KEY);
+  } catch {
+    // Nothing else to clear.
+  }
 };

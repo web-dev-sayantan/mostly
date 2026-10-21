@@ -3,7 +3,7 @@ import { weekStartOf } from "@mostly/domain";
 import { Button } from "@mostly/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PendingUndo } from "@/components/today-screen";
 import { TodayScreen } from "@/components/today-screen";
@@ -30,8 +30,20 @@ const TodayPage = () => {
   const cache = useMemo<TodayCache>(() => readTodayCache(), []);
   const [undo, setUndo] = useState<PendingUndo | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const [openGoalId, setOpenGoalId] = useState<string | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggers = useRef(new Map<string, HTMLButtonElement>());
   const sessions = useLocalSessions();
+  const registerTrigger = useCallback(
+    (goalId: string, node: HTMLButtonElement | null) => {
+      if (node) {
+        triggers.current.set(goalId, node);
+      } else {
+        triggers.current.delete(goalId);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -47,10 +59,16 @@ const TodayPage = () => {
     []
   );
 
-  const settingsQuery = useQuery(
-    orpc.settings.get.queryOptions({ input: { timeZone: detectedTimeZone() } })
-  );
-  const goalsQuery = useQuery(orpc.goals.list.queryOptions());
+  const settingsQuery = useQuery({
+    ...orpc.settings.get.queryOptions({
+      input: { timeZone: detectedTimeZone() },
+    }),
+    meta: { suppressErrorToast: true },
+  });
+  const goalsQuery = useQuery({
+    ...orpc.goals.list.queryOptions(),
+    meta: { suppressErrorToast: true },
+  });
 
   const history = settingsQuery.data?.history ?? cache.settings;
   const resolved = useMemo(
@@ -70,6 +88,7 @@ const TodayPage = () => {
   const sessionsQuery = useQuery({
     ...orpc.sessions.list.queryOptions({ input: sessionRange }),
     enabled: Boolean(weekStart && today),
+    meta: { suppressErrorToast: true },
   });
 
   useEffect(() => {
@@ -190,16 +209,50 @@ const TodayPage = () => {
     setAnnouncement(`${undo.name} undone.`);
   };
 
+  const focusRow = (goalId: string) => {
+    requestAnimationFrame(() => triggers.current.get(goalId)?.focus());
+  };
+
+  const openDetails = (goalId: string) => {
+    if (undo?.goalId === goalId) {
+      clearUndo();
+    }
+    setOpenGoalId(goalId);
+  };
+
+  const closeDetails = () => {
+    const goalId = openGoalId;
+    setOpenGoalId(null);
+    if (goalId) {
+      focusRow(goalId);
+    }
+  };
+
+  const handleRemoved = (goalName: string) => {
+    const goalId = openGoalId;
+    setOpenGoalId(null);
+    setAnnouncement(`${goalName} marked not done.`);
+    if (goalId) {
+      focusRow(goalId);
+    }
+  };
+
   return (
     <TodayScreen
       view={view}
       today={today}
       settings={settings}
       now={now}
+      hasAnyGoal={allGoals.length > 0}
       undo={undo}
       announcement={announcement}
+      openGoalId={openGoalId}
       onMarkDone={markDone}
       onUndo={handleUndo}
+      onOpenDetails={openDetails}
+      onCloseDetails={closeDetails}
+      onRemoved={handleRemoved}
+      registerTrigger={registerTrigger}
     />
   );
 };

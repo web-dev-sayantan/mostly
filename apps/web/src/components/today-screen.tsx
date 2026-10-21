@@ -3,9 +3,12 @@ import type { SettingValues } from "@mostly/domain";
 import { isBeforeRollover } from "@mostly/domain";
 import { Link } from "@tanstack/react-router";
 
+import type { LocalSession } from "@/lib/offline";
+import { isSessionReadOnly } from "@/lib/session-details";
 import type { TodayView } from "@/lib/today";
 import { dailyProgressPercent, todayProgressCopy } from "@/lib/today";
 
+import { SessionDetails } from "./session-details";
 import { TodayGoalRow, WeeklyGoalRow } from "./today-goal-row";
 import { TodayHeader } from "./today-header";
 import { TodaySyncFooter } from "./today-sync-footer";
@@ -21,19 +24,31 @@ export const TodayScreen = ({
   today,
   settings,
   now,
+  hasAnyGoal,
   undo,
   announcement,
+  openGoalId,
   onMarkDone,
   onUndo,
+  onOpenDetails,
+  onCloseDetails,
+  onRemoved,
+  registerTrigger,
 }: {
   view: TodayView;
   today: string;
   settings: SettingValues;
   now: Date;
+  hasAnyGoal: boolean;
   undo: PendingUndo | null;
   announcement: string;
+  openGoalId: string | null;
   onMarkDone: (goal: GoalDto) => void;
   onUndo: () => void;
+  onOpenDetails: (goalId: string) => void;
+  onCloseDetails: () => void;
+  onRemoved: (goalName: string) => void;
+  registerTrigger: (goalId: string, node: HTMLButtonElement | null) => void;
 }) => {
   const late = isBeforeRollover(now, {
     timeZone: settings.timeZone,
@@ -41,6 +56,27 @@ export const TodayScreen = ({
   });
   const progressCopy = todayProgressCopy(view);
   const activeUndo = undo?.logicalDate === today ? undo : null;
+  const emptyCopy = hasAnyGoal
+    ? "Nothing expected today."
+    : "Add the first thing you want to keep doing.";
+  const detailsFor = (goal: GoalDto, session: LocalSession | null) => {
+    if (!session || openGoalId !== goal.id) {
+      return;
+    }
+    return (
+      <SessionDetails
+        key={`${goal.id}-${session.id}`}
+        panelId={`today-panel-${goal.id}`}
+        goalName={goal.name}
+        session={session}
+        logicalDate={session.logicalDate}
+        today={today}
+        readOnly={isSessionReadOnly(goal, session.logicalDate, today)}
+        onClose={onCloseDetails}
+        onRemoved={onRemoved}
+      />
+    );
+  };
 
   return (
     <div className="max-w-[720px]">
@@ -63,15 +99,15 @@ export const TodayScreen = ({
 
         {view.activeGoalCount === 0 ? (
           <div className="bg-card mt-6 rounded-2xl border p-6">
-            <p className="text-muted-foreground text-sm">
-              Add the first thing you want to keep doing.
-            </p>
-            <Link
-              to="/goals"
-              className="bg-primary text-primary-foreground focus-visible:ring-ring/50 mt-4 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Add a goal
-            </Link>
+            <p className="text-muted-foreground text-sm">{emptyCopy}</p>
+            {hasAnyGoal ? null : (
+              <Link
+                to="/goals"
+                className="bg-primary text-primary-foreground focus-visible:ring-ring/50 mt-4 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Add a goal
+              </Link>
+            )}
           </div>
         ) : (
           <>
@@ -88,10 +124,13 @@ export const TodayScreen = ({
                     <TodayGoalRow
                       key={entry.goal.id}
                       entry={entry}
-                      detailsOpen={false}
+                      detailsOpen={openGoalId === entry.goal.id}
+                      details={detailsFor(entry.goal, entry.session)}
                       undoActive={activeUndo?.goalId === entry.goal.id}
                       onMarkDone={onMarkDone}
+                      onOpenDetails={onOpenDetails}
                       onUndo={onUndo}
+                      registerTrigger={registerTrigger}
                     />
                   ))}
                 </ul>
@@ -115,10 +154,13 @@ export const TodayScreen = ({
                     <WeeklyGoalRow
                       key={entry.goal.id}
                       entry={entry}
-                      detailsOpen={false}
+                      detailsOpen={openGoalId === entry.goal.id}
+                      details={detailsFor(entry.goal, entry.session)}
                       undoActive={activeUndo?.goalId === entry.goal.id}
                       onMarkDone={onMarkDone}
+                      onOpenDetails={onOpenDetails}
                       onUndo={onUndo}
+                      registerTrigger={registerTrigger}
                     />
                   ))}
                 </ul>

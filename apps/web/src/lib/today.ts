@@ -135,7 +135,9 @@ export const buildTodayView = ({
           (entry) =>
             entry.goalId === goal.id &&
             entry.logicalDate >= weekStart &&
-            entry.logicalDate <= weekEnd
+            entry.logicalDate <= weekEnd &&
+            entry.logicalDate >= goal.startDate &&
+            (goal.archivedOn === null || entry.logicalDate <= goal.archivedOn)
         )
         .map((entry) => entry.logicalDate)
     );
@@ -202,10 +204,13 @@ export const weeklyTargetCopy = (weekly: WeeklyGoal): string => {
     return "Not enough days this week";
   }
   if (weekly.met) {
-    return `Target met · ${weekly.count} of ${weekly.target} this week`;
+    return "Target met";
   }
   return `${weekly.count} of ${weekly.target} this week`;
 };
+
+export const weeklyCountCopy = (weekly: WeeklyGoal): string =>
+  `${weekly.count} of ${weekly.target} this week`;
 
 export const hasSessionDetails = (
   session: Pick<LocalSession, "minutes" | "note" | "mood"> | null

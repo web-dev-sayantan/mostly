@@ -1,3 +1,4 @@
+import { clearTodayCache } from "@/lib/today-cache";
 import { client } from "@/utils/orpc";
 
 import { createMemoryStorage, createOfflineStore } from "./store";
@@ -28,7 +29,10 @@ export const { markSessionDone } = offlineStore;
 export const { updateLocalSession } = offlineStore;
 export const { deleteLocalSession } = offlineStore;
 export const { cacheServerSessions } = offlineStore;
-export const clearOfflineData = offlineStore.clear;
+export const clearOfflineData = (): void => {
+  offlineStore.clear();
+  clearTodayCache();
+};
 export const syncNow = (): Promise<void> => syncEngine.syncNow();
 export const retrySync = (): void => syncEngine.retry();
 

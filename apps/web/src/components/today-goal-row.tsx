@@ -4,8 +4,13 @@ import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cadenceSummary } from "@/lib/goals";
+import { describeSession, detailsSummary } from "@/lib/session-details";
 import type { TodayGoal, WeeklyGoal } from "@/lib/today";
-import { hasSessionDetails, weeklyTargetCopy } from "@/lib/today";
+import {
+  hasSessionDetails,
+  weeklyCountCopy,
+  weeklyTargetCopy,
+} from "@/lib/today";
 
 const GoalMark = ({ goal }: { goal: GoalDto }) => (
   <span
@@ -55,6 +60,7 @@ const CheckTarget = ({
   done,
   detailsOpen,
   detailsSupported,
+  description,
   onMarkDone,
   onOpenDetails,
   registerTrigger,
@@ -63,6 +69,7 @@ const CheckTarget = ({
   done: boolean;
   detailsOpen: boolean;
   detailsSupported: boolean;
+  description?: string;
   onMarkDone: (goal: GoalDto) => void;
   onOpenDetails?: (goalId: string) => void;
   registerTrigger?: (goalId: string, node: HTMLButtonElement | null) => void;
@@ -85,6 +92,9 @@ const CheckTarget = ({
       type="button"
       onClick={onClick}
       aria-label={label}
+      aria-describedby={
+        done && description ? `today-description-${goal.id}` : undefined
+      }
       aria-expanded={canEditDetails ? detailsOpen : undefined}
       aria-controls={canEditDetails ? `today-panel-${goal.id}` : undefined}
       className="focus-visible:ring-ring/50 flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
@@ -109,11 +119,18 @@ const CheckTarget = ({
   );
 };
 
-const UndoControl = ({ onUndo }: { onUndo: () => void }) => (
+const UndoControl = ({
+  goalName,
+  onUndo,
+}: {
+  goalName: string;
+  onUndo: () => void;
+}) => (
   <div className="border-t px-2 py-0.5">
     <button
       type="button"
       onClick={onUndo}
+      aria-label={`Undo ${goalName}`}
       className="text-primary focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
     >
       Undo
@@ -133,6 +150,7 @@ const AddDetails = ({
   <button
     type="button"
     onClick={() => onOpenDetails(goal.id)}
+    aria-label={`Add details for ${goal.name}`}
     aria-expanded={detailsOpen}
     aria-controls={`today-panel-${goal.id}`}
     className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full px-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
@@ -165,6 +183,8 @@ export const TodayGoalRow = ({
   const done = session !== null;
   const detailsDot = hasSessionDetails(session);
   const detailsSupported = Boolean(onOpenDetails);
+  const description = session ? describeSession(goal.name, session) : undefined;
+  const summary = session ? detailsSummary(session) : null;
 
   const content = (
     <>
@@ -177,6 +197,7 @@ export const TodayGoalRow = ({
         />
         <span className="text-muted-foreground block truncate text-sm">
           {cadenceSummary(cadence)}
+          {summary ? ` · ${summary}` : ""}
         </span>
       </span>
     </>
@@ -194,6 +215,9 @@ export const TodayGoalRow = ({
           <button
             type="button"
             onClick={() => onOpenDetails(goal.id)}
+            aria-describedby={
+              description ? `today-description-${goal.id}` : undefined
+            }
             aria-expanded={detailsOpen}
             aria-controls={`today-panel-${goal.id}`}
             className="focus-visible:ring-ring/50 flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
@@ -218,13 +242,19 @@ export const TodayGoalRow = ({
             done={done}
             detailsOpen={detailsOpen}
             detailsSupported={detailsSupported}
+            description={description}
             onMarkDone={onMarkDone}
             onOpenDetails={onOpenDetails}
             registerTrigger={registerTrigger}
           />
         </div>
       </div>
-      {undoActive ? <UndoControl onUndo={onUndo} /> : null}
+      {description ? (
+        <span id={`today-description-${goal.id}`} className="sr-only">
+          {description}
+        </span>
+      ) : null}
+      {undoActive ? <UndoControl goalName={goal.name} onUndo={onUndo} /> : null}
       {details}
     </li>
   );
@@ -265,6 +295,9 @@ export const WeeklyGoalRow = ({
   const detailsDot = hasSessionDetails(session);
   const detailsSupported = Boolean(onOpenDetails);
   const status = weeklyTargetCopy(entry);
+  const countCopy = entry.scored && entry.met ? weeklyCountCopy(entry) : null;
+  const description = session ? describeSession(goal.name, session) : undefined;
+  const summary = session ? detailsSummary(session) : null;
 
   const content = (
     <>
@@ -275,7 +308,18 @@ export const WeeklyGoalRow = ({
           done={done}
           showDetailsDot={detailsDot && detailsSupported}
         />
-        <span className="text-muted-foreground block text-sm">{status}</span>
+        <span className="text-muted-foreground block text-sm">
+          {status}
+          {entry.scored && entry.met ? ". More sessions are welcome." : null}
+        </span>
+        {countCopy ? (
+          <span className="text-muted-foreground block text-sm">
+            {countCopy}
+          </span>
+        ) : null}
+        {summary ? (
+          <span className="text-muted-foreground block text-sm">{summary}</span>
+        ) : null}
         <ProgressDots entry={entry} />
       </span>
     </>
@@ -293,6 +337,9 @@ export const WeeklyGoalRow = ({
           <button
             type="button"
             onClick={() => onOpenDetails(goal.id)}
+            aria-describedby={
+              description ? `today-description-${goal.id}` : undefined
+            }
             aria-expanded={detailsOpen}
             aria-controls={`today-panel-${goal.id}`}
             className="focus-visible:ring-ring/50 flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
@@ -327,6 +374,7 @@ export const WeeklyGoalRow = ({
               done={done}
               detailsOpen={detailsOpen}
               detailsSupported={detailsSupported}
+              description={description}
               onMarkDone={onMarkDone}
               onOpenDetails={onOpenDetails}
               registerTrigger={registerTrigger}
@@ -334,7 +382,12 @@ export const WeeklyGoalRow = ({
           )}
         </div>
       </div>
-      {undoActive ? <UndoControl onUndo={onUndo} /> : null}
+      {description ? (
+        <span id={`today-description-${goal.id}`} className="sr-only">
+          {description}
+        </span>
+      ) : null}
+      {undoActive ? <UndoControl goalName={goal.name} onUndo={onUndo} /> : null}
       {details}
     </li>
   );

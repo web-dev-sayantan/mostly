@@ -8,6 +8,7 @@ import {
   hasSessionDetails,
   resolveTodaySettings,
   todayProgressCopy,
+  weeklyCountCopy,
   weeklyTargetCopy,
 } from "./today";
 
@@ -211,7 +212,10 @@ describe("buildTodayView", () => {
     expect(view.weeklyOpenCount).toBe(1);
 
     expect(weeklyTargetCopy({ ...entry, count: 3, met: true })).toBe(
-      "Target met · 3 of 3 this week"
+      "Target met"
+    );
+    expect(weeklyCountCopy({ ...entry, count: 3, met: true })).toBe(
+      "3 of 3 this week"
     );
   });
 
