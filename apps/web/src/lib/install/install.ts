@@ -9,6 +9,11 @@ export const INSTALL_STORAGE_KEYS = {
 export type InstallPlatform = "ios" | "android" | "desktop";
 export type InstallAction = "prompt" | "ios-instructions" | "none";
 
+export interface StorageManagerLike {
+  persist?: () => Promise<boolean>;
+  persisted?: () => Promise<boolean>;
+}
+
 export interface InstallSignals {
   hasSession: boolean;
   isStandalone: boolean;
@@ -34,7 +39,9 @@ const safeSet = (storage: StorageLike, key: string, value: string): void => {
 };
 
 export const getInstallVisits = (storage: StorageLike): number => {
-  const value = Number.parseInt(safeGet(storage, INSTALL_STORAGE_KEYS.visits) ?? "", 10);
+  const value = Math.trunc(
+    Number(safeGet(storage, INSTALL_STORAGE_KEYS.visits) ?? "")
+  );
   return Number.isFinite(value) && value > 0 ? value : 0;
 };
 
@@ -51,6 +58,29 @@ export const dismissInstall = (storage: StorageLike): void =>
 
 export const isInstallDismissed = (storage: StorageLike): boolean =>
   safeGet(storage, INSTALL_STORAGE_KEYS.dismissed) === "1";
+
+/** Quietly asks the browser to keep local data. Cloud sync is still the backup. */
+export const requestPersistentStorage = async (
+  storage: StorageLike,
+  manager: StorageManagerLike
+): Promise<void> => {
+  if (safeGet(storage, INSTALL_STORAGE_KEYS.persistentStorage) === "1") {
+    return;
+  }
+  if (!manager.persist) {
+    return;
+  }
+
+  try {
+    const alreadyPersisted = (await manager.persisted?.()) ?? false;
+    if (!alreadyPersisted) {
+      await manager.persist();
+    }
+    safeSet(storage, INSTALL_STORAGE_KEYS.persistentStorage, "1");
+  } catch {
+    // Denied or unavailable; the app still works and sync remains the backup.
+  }
+};
 
 export const detectInstallPlatform = (
   userAgent: string,
@@ -70,7 +100,11 @@ export const decideInstallAction = (
   storage: StorageLike,
   signals: InstallSignals
 ): InstallAction => {
-  if (signals.isStandalone || signals.isOnboarding || isInstallDismissed(storage)) {
+  if (
+    signals.isStandalone ||
+    signals.isOnboarding ||
+    isInstallDismissed(storage)
+  ) {
     return "none";
   }
 

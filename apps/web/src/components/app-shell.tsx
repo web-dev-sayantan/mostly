@@ -2,7 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { CalendarDays, ChartNoAxesColumn, Target, User } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { OfflineBanner } from "@/lib/offline";
+import { InstallPrompt } from "@/lib/install/install-prompt";
+import { OfflineBanner, SyncStatusLine } from "@/lib/offline";
 
 import { ModeToggle } from "./mode-toggle";
 import UserMenu from "./user-menu";
@@ -48,9 +49,13 @@ const AppShell = ({ children }: { children: ReactNode }) => (
     </header>
 
     <OfflineBanner />
+    <InstallPrompt />
 
     <main className="mx-auto w-full max-w-[960px] flex-1 pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] md:pb-8">
       {children}
+      <footer className="border-border text-muted-foreground mt-8 border-t pt-3 text-sm">
+        <SyncStatusLine />
+      </footer>
     </main>
 
     <nav

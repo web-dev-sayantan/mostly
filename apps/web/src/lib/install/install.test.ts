@@ -7,6 +7,7 @@ import {
   detectInstallPlatform,
   dismissInstall,
   recordInstallVisit,
+  requestPersistentStorage,
 } from "./install";
 
 class MemoryStorage implements StorageLike {
@@ -25,7 +26,9 @@ class MemoryStorage implements StorageLike {
   }
 }
 
-const signal = (overrides: Partial<Parameters<typeof decideInstallAction>[1]> = {}) => ({
+const signal = (
+  overrides: Partial<Parameters<typeof decideInstallAction>[1]> = {}
+) => ({
   hasSession: false,
   isStandalone: false,
   isOnboarding: false,
@@ -39,9 +42,9 @@ describe("install prompt", () => {
     const storage = new MemoryStorage();
     recordInstallVisit(storage);
 
-    expect(
-      decideInstallAction(storage, signal({ hasSession: true }))
-    ).toBe("prompt");
+    expect(decideInstallAction(storage, signal({ hasSession: true }))).toBe(
+      "prompt"
+    );
   });
 
   it("waits for a second visit when no session exists yet", () => {
@@ -60,9 +63,9 @@ describe("install prompt", () => {
     recordInstallVisit(storage);
     dismissInstall(storage);
 
-    expect(
-      decideInstallAction(storage, signal({ hasSession: true }))
-    ).toBe("none");
+    expect(decideInstallAction(storage, signal({ hasSession: true }))).toBe(
+      "none"
+    );
   });
 
   it("hides when the app is already installed", () => {
@@ -151,5 +154,48 @@ describe("install platform", () => {
         0
       )
     ).toBe("desktop");
+  });
+});
+
+describe("persistent storage", () => {
+  it("asks once and skips the second call", async () => {
+    const storage = new MemoryStorage();
+    let persistCalls = 0;
+    const manager = {
+      persisted: () => Promise.resolve(false),
+      persist: () => {
+        persistCalls += 1;
+        return Promise.resolve(true);
+      },
+    };
+
+    await requestPersistentStorage(storage, manager);
+    await requestPersistentStorage(storage, manager);
+
+    expect(persistCalls).toBe(1);
+  });
+
+  it("does not ask again when storage is already persistent", async () => {
+    const storage = new MemoryStorage();
+    let persistCalls = 0;
+    const manager = {
+      persisted: () => Promise.resolve(true),
+      persist: () => {
+        persistCalls += 1;
+        return Promise.resolve(true);
+      },
+    };
+
+    await requestPersistentStorage(storage, manager);
+
+    expect(persistCalls).toBe(0);
+  });
+
+  it("stays quiet where persistent storage is unsupported", async () => {
+    const storage = new MemoryStorage();
+
+    await requestPersistentStorage(storage, {});
+
+    expect(storage.getItem("mostly:persistent-storage-requested")).toBeNull();
   });
 });
