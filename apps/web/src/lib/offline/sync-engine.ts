@@ -217,7 +217,7 @@ export const createSyncEngine = ({
         pendingCount: queue.length,
         conflicts,
         authExpired,
-        accountDeleted,
+        accountDeleted: accountDeleted && store.getUserId() === null,
         retry,
       };
     },
