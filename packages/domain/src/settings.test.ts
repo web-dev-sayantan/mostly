@@ -129,6 +129,42 @@ describe("resolveSettingsForNow", () => {
     ).toMatchObject({ today: "2026-10-22" });
   });
 
+  it("ignores future versions until their effective day", () => {
+    const history: SettingVersion[] = [
+      {
+        effectiveFrom: "2026-10-01",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+      },
+      {
+        effectiveFrom: "2026-10-22",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 6,
+      },
+      {
+        effectiveFrom: "2026-10-25",
+        timeZone: "UTC",
+        weekStartsOn: 7,
+        dayRolloverHour: 6,
+      },
+    ];
+
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-21T05:00:00Z"))
+    ).toMatchObject({
+      today: "2026-10-21",
+      current: { effectiveFrom: "2026-10-01" },
+    });
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-22T05:00:00Z"))
+    ).toMatchObject({
+      today: "2026-10-22",
+      current: { effectiveFrom: "2026-10-22" },
+    });
+  });
+
   it("does not open the effective day early on a 6 to 4 transition", () => {
     const history: SettingVersion[] = [
       {
@@ -229,6 +265,16 @@ describe("skippedDatesForTimeZoneChange", () => {
     });
 
     expect(dates).toEqual(["2026-10-23"]);
+  });
+
+  it("can derive the boundary from the resolved today", () => {
+    const dates = skippedDatesForTimeZoneChange({
+      today: "2026-10-20",
+      current: { timeZone: "Pacific/Pago_Pago", rolloverHour: 4 },
+      next: { timeZone: "Pacific/Kiritimati", rolloverHour: 4 },
+    });
+
+    expect(dates).toEqual(["2026-10-21"]);
   });
 });
 
