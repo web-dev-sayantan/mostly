@@ -223,6 +223,56 @@ describe("deriveOutcomes", () => {
     ]);
   });
 
+  it("marks the week that changes week start as not scored and starts the new era", () => {
+    const outcomes = deriveOutcomes({
+      goals: [
+        goal({
+          id: "weekly",
+          startDate: "2026-10-19",
+          scheduleVersions: [
+            version("2026-10-19", { type: "weekly_target", target: 2 }),
+          ],
+        }),
+      ],
+      sessions: [
+        session("2026-10-19", { goalId: "weekly" }),
+        session("2026-10-20", { goalId: "weekly" }),
+      ],
+      today: "2026-10-26",
+      settings: [
+        {
+          effectiveFrom: "2026-10-19",
+          timeZone: "UTC",
+          weekStartsOn: 1,
+          dayRolloverHour: 4,
+        },
+        {
+          effectiveFrom: "2026-10-25",
+          timeZone: "UTC",
+          weekStartsOn: 7,
+          dayRolloverHour: 4,
+        },
+      ],
+    });
+
+    expect(outcomes.weekly).toEqual([
+      expect.objectContaining({
+        goalId: "weekly",
+        weekStart: "2026-10-19",
+        weekEnd: "2026-10-24",
+        activeDays: 6,
+        outcome: "not_scored",
+      }),
+      expect.objectContaining({
+        goalId: "weekly",
+        weekStart: "2026-10-25",
+        weekEnd: "2026-10-31",
+        activeDays: 2,
+        outcome: "in_progress",
+      }),
+    ]);
+  });
+
   it("returns empty outcomes when there is nothing to score", () => {
     expect(
       deriveOutcomes({

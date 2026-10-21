@@ -193,12 +193,21 @@ const weeklyRows = (
   while (cursor <= end) {
     const weekStartsOn = settingsForDate(settings, cursor)?.weekStartsOn ?? 1;
     const weekStart = weekStartOf(cursor, weekStartsOn);
-    const weekEnd = weekEndOf(cursor, weekStartsOn);
+    const calendarWeekEnd = weekEndOf(cursor, weekStartsOn);
+    const transitionWeek = weekTransition(
+      calendarWeekEnd,
+      weekStartsOn,
+      settings
+    );
+    // A week-start change ends the old week on the day before the new era.
+    const eraWeekEnd = transitionWeek
+      ? addLogicalDays(calendarWeekEnd, -1)
+      : calendarWeekEnd;
     const activeStart = weekStart < goal.startDate ? goal.startDate : weekStart;
-    const activeEnd = weekEnd > end ? end : weekEnd;
+    const activeEnd = eraWeekEnd > end ? end : eraWeekEnd;
     const cadence = resolveSchedule(goal.scheduleVersions, activeStart);
 
-    if (cadence?.type === "weekly_target") {
+    if (cadence?.type === "weekly_target" && activeEnd >= activeStart) {
       let activeDays = 0;
       let sessionCount = 0;
       for (
@@ -213,23 +222,25 @@ const weeklyRows = (
       rows.push({
         goalId: goal.id,
         weekStart,
-        weekEnd,
+        weekEnd: eraWeekEnd,
         target: cadence.target,
         sessions: sessionCount,
         activeDays,
         outcome: weeklyOutcome({
           activeDays,
           complete:
-            weekEnd < today ||
+            eraWeekEnd < today ||
             (goal.archivedOn !== null && goal.archivedOn < today),
           sessions: sessionCount,
           target: cadence.target,
-          transitionWeek: weekTransition(weekEnd, weekStartsOn, settings),
+          transitionWeek,
         }),
       });
     }
 
-    cursor = addLogicalDays(weekEnd, 1);
+    cursor = transitionWeek
+      ? calendarWeekEnd
+      : addLogicalDays(calendarWeekEnd, 1);
   }
 
   return rows;
