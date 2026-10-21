@@ -79,22 +79,45 @@ export const skippedDatesOf = (
   return [...dates];
 };
 
+/** An instant inside the given logical date, used when no clock instant is given. */
+const instantOnLogicalDate = (date: string, settings: TimeSettings): Date => {
+  let instant = new Date(`${date}T12:00:00Z`);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const resolved = logicalDate(instant, settings);
+    if (resolved === date) {
+      break;
+    }
+    const days = Math.round(
+      (Date.parse(`${resolved}T00:00:00Z`) - Date.parse(`${date}T00:00:00Z`)) /
+        86_400_000
+    );
+    instant = new Date(instant.getTime() - days * 86_400_000);
+  }
+  return instant;
+};
+
 /**
  * Dates a timezone jump never produces. The change lands at the next logical
  * boundary under the old settings; if the new zone is already past that date,
  * the dates in between have no expectation and no data.
  */
 export const skippedDatesForTimeZoneChange = ({
+  today,
   now,
   current,
   next,
 }: {
-  now: Date;
+  /** The resolved logical today from the settings handler, not recomputed. */
+  today: string;
+  /** Anchors the next boundary under the old settings. */
+  now?: Date;
   current: TimeSettings;
   next: TimeSettings;
 }): string[] => {
-  const today = logicalDate(now, current);
-  const boundary = nextLogicalBoundary(now, current);
+  const boundary = nextLogicalBoundary(
+    now ?? instantOnLogicalDate(today, current),
+    current
+  );
   const firstNewDate = logicalDate(boundary, next);
   const dates: string[] = [];
 
@@ -110,35 +133,50 @@ export const skippedDatesForTimeZoneChange = ({
 };
 
 /**
- * Today and the version in effect, keeping the earliest hint on a backward
- * correction. A rollover change must not reopen the day that already closed
- * under the old rule (ADR 0005).
+ * Today and the version in effect. Walk the history in order: the day a version
+ * starts opens under the previous rule, later days follow that version's rule.
+ * The cache hint is never needed for correctness, so a stale rollover cannot
+ * reopen or skip a day.
  */
 export const resolveSettingsForNow = <Version extends SettingVersion>(
   versions: readonly Version[],
   now: Date,
-  hint?: TimeSettings | null
+  _hint?: TimeSettings | null
 ): { today: string; current: Version } | null => {
-  if (versions.length === 0) {
-    return null;
-  }
-
   const sorted = versions.toSorted((left, right) =>
     left.effectiveFrom.localeCompare(right.effectiveFrom)
   );
-  const latest = sorted.at(-1) as Version;
-  const initial: TimeSettings = hint ?? {
-    timeZone: latest.timeZone,
-    rolloverHour: latest.dayRolloverHour,
-  };
-  const preliminary = logicalDate(now, initial);
-  let current = settingsForDate(sorted, preliminary) ?? latest;
-  const corrected = logicalDate(now, {
-    timeZone: current.timeZone,
-    rolloverHour: current.dayRolloverHour,
+  const [first] = sorted;
+  if (!first) {
+    return null;
+  }
+
+  let today = logicalDate(now, {
+    timeZone: first.timeZone,
+    rolloverHour: first.dayRolloverHour,
   });
-  const today = corrected > preliminary ? corrected : preliminary;
-  current = settingsForDate(sorted, today) ?? current;
+  let current = first;
+
+  for (const version of sorted.slice(1)) {
+    const { effectiveFrom } = version;
+    if (today < effectiveFrom) {
+      break;
+    }
+    const newToday = logicalDate(now, {
+      timeZone: version.timeZone,
+      rolloverHour: version.dayRolloverHour,
+    });
+    const skipped = version.skippedDates?.includes(effectiveFrom) ?? false;
+    if (today === effectiveFrom && !skipped) {
+      // The effective day opened under the previous rule; keep it until this
+      // rule has caught up to the same day.
+      today = effectiveFrom;
+    } else {
+      // Follow the new rule, but never move before the day that already opened.
+      today = newToday > effectiveFrom ? newToday : effectiveFrom;
+    }
+    current = version;
+  }
 
   return { today, current };
 };

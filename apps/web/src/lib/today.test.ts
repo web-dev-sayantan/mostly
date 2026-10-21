@@ -258,6 +258,67 @@ describe("buildTodayView", () => {
     ).toEqual(["Not enough days this week", "Not enough days this week"]);
     expect(view.weeklyOpenCount).toBe(2);
   });
+  it("does not score a week when a skipped day leaves too few active days", () => {
+    const weekly = goal({
+      id: "weekly",
+      scheduleVersions: [
+        {
+          id: "version-weekly",
+          effectiveFrom: "2026-10-01",
+          cadence: { type: "weekly_target", target: 7 },
+        },
+      ],
+    });
+    const view = buildTodayView({
+      goals: [weekly],
+      sessions: [session({ goalId: "weekly", logicalDate: "2026-10-21" })],
+      today: "2026-10-20",
+      weekStartsOn: 1,
+      skippedDates: ["2026-10-21"],
+    });
+
+    expect(view.weeklyGoals[0]).toMatchObject({
+      target: 7,
+      count: 0,
+      scored: false,
+      met: false,
+    });
+  });
+
+  it("keeps a Sunday to Monday transition week together on Today", () => {
+    const weekly = goal({
+      id: "weekly",
+      startDate: "2026-10-05",
+      scheduleVersions: [
+        {
+          id: "version-weekly",
+          effectiveFrom: "2026-10-05",
+          cadence: { type: "weekly_target", target: 3 },
+        },
+      ],
+    });
+    const view = buildTodayView({
+      goals: [weekly],
+      sessions: [
+        session({ goalId: "weekly", logicalDate: "2026-10-24" }),
+        session({ goalId: "weekly", logicalDate: "2026-10-25" }),
+      ],
+      today: "2026-10-25",
+      weekStartsOn: 7,
+      weekStartHistory: [
+        { effectiveFrom: "2020-01-01", weekStartsOn: 7 },
+        { effectiveFrom: "2026-10-26", weekStartsOn: 1 },
+      ],
+    });
+
+    expect(view.weeklyGoals[0]).toMatchObject({
+      weekStart: "2026-10-18",
+      weekEnd: "2026-10-25",
+      count: 2,
+      scored: false,
+      met: false,
+    });
+  });
 });
 
 describe("today progress copy", () => {

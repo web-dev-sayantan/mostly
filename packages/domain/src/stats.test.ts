@@ -316,6 +316,22 @@ describe("goalStats weekly target outcomes", () => {
     expect(stats.bestStreak).toBe(3);
   });
 
+  it("leaves a skipped date out of weekly active days", () => {
+    const stats = statsFor({
+      startDate: "2026-10-05",
+      today: "2026-10-11",
+      versions: [weekly("2026-10-05", 7)],
+      skippedDates: ["2026-10-08"],
+      durations: sessions("2026-10-05", "2026-10-08"),
+    });
+
+    expect(stats.weeks[0]).toMatchObject({
+      activeDays: 6,
+      sessions: 1,
+      status: "not_scored",
+    });
+  });
+
   it("counts a current week that is already met toward the streak but not consistency", () => {
     const stats = statsFor({
       startDate: "2026-01-05",
@@ -461,6 +477,52 @@ describe("goalStats streak eras", () => {
       "2026-01-18",
       "2026-01-25",
       "2026-02-01",
+    ]);
+  });
+
+  it("keeps the Sunday to Monday transition block out of weekly scoring", () => {
+    const stats = statsFor({
+      startDate: "2026-10-04",
+      today: "2026-11-02",
+      versions: [weekly("2026-10-04", 2)],
+      settingVersions: [
+        { effectiveFrom: "2020-01-01", weekStartsOn: 7 },
+        { effectiveFrom: "2026-10-26", weekStartsOn: 1 },
+      ],
+      durations: sessions(
+        "2026-10-20",
+        "2026-10-25",
+        "2026-10-31",
+        "2026-11-01",
+        "2026-11-02"
+      ),
+    });
+
+    expect(stats.eras).toEqual([
+      {
+        startDate: "2026-10-04",
+        endDate: "2026-10-25",
+        unit: "week",
+        bestStreak: 0,
+      },
+      {
+        startDate: "2026-10-26",
+        endDate: "2026-11-02",
+        unit: "week",
+        bestStreak: 1,
+      },
+    ]);
+    expect(stats.consistency).toEqual({
+      done: 1,
+      expected: 3,
+      percent: 33,
+      qualified: true,
+    });
+    expect(
+      stats.weeks.map((week) => [week.start, week.end, week.status])
+    ).toEqual([
+      ["2026-10-26", "2026-11-01", "met"],
+      ["2026-11-02", "2026-11-02", "in_progress"],
     ]);
   });
 

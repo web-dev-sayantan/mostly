@@ -104,11 +104,139 @@ describe("resolveSettingsForNow", () => {
       })
     ).toMatchObject({ today: "2026-10-23" });
   });
+
+  it("does not let a stale cache reopen the transition day", () => {
+    const history: SettingVersion[] = [
+      {
+        effectiveFrom: "2026-10-01",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+      },
+      {
+        effectiveFrom: "2026-10-22",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 6,
+      },
+    ];
+
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-23T05:00:00Z"), {
+        timeZone: "UTC",
+        rolloverHour: 4,
+      })
+    ).toMatchObject({ today: "2026-10-22" });
+  });
+
+  it("ignores future versions until their effective day", () => {
+    const history: SettingVersion[] = [
+      {
+        effectiveFrom: "2026-10-01",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+      },
+      {
+        effectiveFrom: "2026-10-22",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 6,
+      },
+      {
+        effectiveFrom: "2026-10-25",
+        timeZone: "UTC",
+        weekStartsOn: 7,
+        dayRolloverHour: 6,
+      },
+    ];
+
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-21T05:00:00Z"))
+    ).toMatchObject({
+      today: "2026-10-21",
+      current: { effectiveFrom: "2026-10-01" },
+    });
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-22T05:00:00Z"))
+    ).toMatchObject({
+      today: "2026-10-22",
+      current: { effectiveFrom: "2026-10-22" },
+    });
+  });
+
+  it("does not open the effective day early on a 6 to 4 transition", () => {
+    const history: SettingVersion[] = [
+      {
+        effectiveFrom: "2026-10-01",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 6,
+      },
+      {
+        effectiveFrom: "2026-10-02",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+      },
+    ];
+
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-02T04:30:00Z"))
+    ).toMatchObject({ today: "2026-10-01" });
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-02T06:00:00Z"))
+    ).toMatchObject({ today: "2026-10-02" });
+  });
+
+  it("uses the new date after a timezone jump skips the effective day", () => {
+    const history: SettingVersion[] = [
+      {
+        effectiveFrom: "2026-10-01",
+        timeZone: "Pacific/Pago_Pago",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+      },
+      {
+        effectiveFrom: "2026-10-21",
+        timeZone: "Pacific/Kiritimati",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+        skippedDates: ["2026-10-21"],
+      },
+    ];
+
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-21T15:30:00Z"))
+    ).toMatchObject({ today: "2026-10-22" });
+  });
+
+  it("does not move backward when a timezone jump repeats days", () => {
+    const history: SettingVersion[] = [
+      {
+        effectiveFrom: "2026-10-01",
+        timeZone: "Pacific/Kiritimati",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+      },
+      {
+        effectiveFrom: "2026-10-21",
+        timeZone: "Pacific/Pago_Pago",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+      },
+    ];
+
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-21T14:00:00Z"))
+    ).toMatchObject({ today: "2026-10-21" });
+  });
 });
 
 describe("skippedDatesForTimeZoneChange", () => {
   it("records the date a dateline jump forward never produces", () => {
     const dates = skippedDatesForTimeZoneChange({
+      today: "2026-10-20",
       now: new Date("2026-10-21T00:00:00Z"),
       current: { timeZone: "Pacific/Pago_Pago", rolloverHour: 4 },
       next: { timeZone: "Pacific/Kiritimati", rolloverHour: 4 },
@@ -119,12 +247,34 @@ describe("skippedDatesForTimeZoneChange", () => {
 
   it("does not skip a date when the change repeats a local day", () => {
     const dates = skippedDatesForTimeZoneChange({
+      today: "2026-10-22",
       now: new Date("2026-10-22T00:00:00Z"),
       current: { timeZone: "Pacific/Kiritimati", rolloverHour: 4 },
       next: { timeZone: "Pacific/Pago_Pago", rolloverHour: 4 },
     });
 
     expect(dates).toEqual([]);
+  });
+
+  it("starts from the resolved today instead of recomputing it", () => {
+    const dates = skippedDatesForTimeZoneChange({
+      today: "2026-10-22",
+      now: new Date("2026-10-23T05:00:00Z"),
+      current: { timeZone: "UTC", rolloverHour: 4 },
+      next: { timeZone: "Pacific/Kiritimati", rolloverHour: 4 },
+    });
+
+    expect(dates).toEqual(["2026-10-23"]);
+  });
+
+  it("can derive the boundary from the resolved today", () => {
+    const dates = skippedDatesForTimeZoneChange({
+      today: "2026-10-20",
+      current: { timeZone: "Pacific/Pago_Pago", rolloverHour: 4 },
+      next: { timeZone: "Pacific/Kiritimati", rolloverHour: 4 },
+    });
+
+    expect(dates).toEqual(["2026-10-21"]);
   });
 });
 

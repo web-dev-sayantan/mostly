@@ -17,8 +17,7 @@ import {
   resolveSchedule,
   settingsForDate,
   skippedDatesOf,
-  weekEndOf,
-  weekStartOf,
+  weekSegmentFor,
 } from "@mostly/domain";
 import { and, asc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
@@ -171,8 +170,17 @@ export const daysRouter = {
           weekStartsOn: 1,
           dayRolloverHour: 4,
         };
-      const weekStart = weekStartOf(input.date, settings.weekStartsOn);
-      const weekEnd = weekEndOf(input.date, settings.weekStartsOn);
+      const weekStartHistory =
+        history.length > 0
+          ? history
+          : [
+              {
+                effectiveFrom: "0000-01-01",
+                weekStartsOn: settings.weekStartsOn,
+              },
+            ];
+      const week = weekSegmentFor(weekStartHistory, input.date);
+      const { start: weekStart, end: weekEnd } = week;
 
       const [goalRows, sessionRows] = await Promise.all([
         context.db
@@ -221,6 +229,7 @@ export const daysRouter = {
         weekStartsOn: settings.weekStartsOn,
         goals: resolvableGoals,
         sessions: domainSessions,
+        weekStartHistory,
         skippedDates: skippedDatesOf(history),
       });
 
