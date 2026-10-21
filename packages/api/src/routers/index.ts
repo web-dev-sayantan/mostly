@@ -2,6 +2,7 @@ import type { RouterClient } from "@orpc/server";
 
 import { protectedProcedure, publicProcedure } from "../procedures";
 import { goalsRouter } from "./goals";
+import { sessionsRouter } from "./sessions";
 import { settingsRouter } from "./settings";
 
 export const appRouter = {
@@ -12,6 +13,7 @@ export const appRouter = {
   })),
   goals: goalsRouter,
   settings: settingsRouter,
+  sessions: sessionsRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

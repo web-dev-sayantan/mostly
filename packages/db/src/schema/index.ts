@@ -1,4 +1,5 @@
-/* eslint-disable no-barrel-file -- schema index is the documented database barrel */
+/* eslint-disable oxc/no-barrel-file -- the schema entry point Drizzle reads */
 export * from "./auth";
 export * from "./goals";
+export * from "./sessions";
 export * from "./settings";

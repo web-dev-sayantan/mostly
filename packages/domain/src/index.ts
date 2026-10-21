@@ -32,3 +32,20 @@ export type {
   SettingVersion,
 } from "./settings";
 export { planSettingChange, settingsForDate } from "./settings";
+export type {
+  Mood,
+  SessionConflict,
+  SessionGoal,
+  SessionOp,
+  SessionRecord,
+  SessionResolution,
+  SyncRejection,
+} from "./sync";
+export {
+  CONFLICT_TTL_MS,
+  createSessionConflict,
+  MOODS,
+  pruneExpiredConflicts,
+  rejectSessionOp,
+  resolveSessionOp,
+} from "./sync";
