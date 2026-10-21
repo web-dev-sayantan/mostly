@@ -50,6 +50,7 @@ const day: DayDetailDto = {
   date: "2026-10-20",
   today: "2026-10-20",
   readOnly: false,
+  skipped: false,
   weekStartsOn: 1,
   timeZone: "UTC",
   dayRolloverHour: 4,

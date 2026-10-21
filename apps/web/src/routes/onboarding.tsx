@@ -163,7 +163,10 @@ const OnboardingPage = () => {
         await enablePushReminders(publicKey ?? undefined);
       }
 
-      const startDate = defaultStartDate();
+      const settings = await client.settings.get({
+        timeZone: detectedTimeZone(),
+      });
+      const startDate = defaultStartDate(settings.today);
       const pending = drafts.filter(
         (draft) => !created.current.has(draft.name)
       );
@@ -181,7 +184,6 @@ const OnboardingPage = () => {
         })
       );
 
-      await client.settings.get({ timeZone: detectedTimeZone() });
       await client.reminders.update({
         enabled: withReminder,
         time: reminderTime || "21:30",

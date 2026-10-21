@@ -5,6 +5,7 @@ import type {
 } from "@mostly/api/routers/days";
 import type { DayExpectationStatus, WeeklyOutcome } from "@mostly/domain";
 import {
+  comparePriority,
   isDayEditable,
   isIsoDate,
   isWithinLastLogicalDays,
@@ -35,6 +36,7 @@ import {
   useLocalSessions,
   useSyncStatus,
 } from "@/lib/offline";
+import { weekOutcomeCopy } from "@/lib/stats-format";
 import { formatLogicalDate } from "@/lib/time";
 import { orpc } from "@/utils/orpc";
 
@@ -43,12 +45,6 @@ type DisplaySession = Pick<
   DaySessionDto,
   "id" | "goalId" | "logicalDate" | "minutes" | "note" | "mood"
 >;
-
-const PRIORITY_RANK: Record<DayGoalDto["priority"], number> = {
-  high: 0,
-  medium: 1,
-  low: 2,
-};
 
 const STATUS_LABELS: Record<Status, string> = {
   done: "Done",
@@ -71,18 +67,7 @@ const weeklyCopy = (entry: {
   status: WeeklyOutcome;
   sessions: number;
   target: number;
-}) => {
-  if (entry.status === "met") {
-    return "Target met";
-  }
-  if (entry.status === "not_scored") {
-    return "Not enough days this week";
-  }
-  if (entry.status === "missed") {
-    return `${entry.sessions} of ${entry.target} this week · Missed`;
-  }
-  return `${entry.sessions} of ${entry.target} this week`;
-};
+}) => weekOutcomeCopy(entry.status, entry.sessions, entry.target);
 
 interface DayExpectationView {
   goal: DayGoalDto;
@@ -111,6 +96,7 @@ interface DayExtraView {
 
 interface DayView {
   readOnly: boolean;
+  skipped: boolean;
   expectations: DayExpectationView[];
   weekly: DayWeeklyView[];
   extras: DayExtraView[];
@@ -146,8 +132,7 @@ const buildExtras = ({
     })
     .toSorted(
       (left, right) =>
-        PRIORITY_RANK[left.goal.priority] -
-          PRIORITY_RANK[right.goal.priority] ||
+        comparePriority(left.goal.priority, right.goal.priority) ||
         left.goal.name.localeCompare(right.goal.name)
     );
 
@@ -157,9 +142,10 @@ const buildDayView = (
   knownSessions: readonly DisplaySession[],
   today: string
 ): DayView => {
-  const daySessions = knownSessions.filter(
-    (session) => session.logicalDate === date
-  );
+  const skipped = data.skipped === true;
+  const daySessions = skipped
+    ? []
+    : knownSessions.filter((session) => session.logicalDate === date);
   const sessionByGoal = new Map(
     daySessions.map((session) => [session.goalId, session])
   );
@@ -223,12 +209,16 @@ const buildDayView = (
   });
 
   const weeklySessions = weekly.filter((entry) => entry.session !== null);
-  const candidates = data.candidates.filter(
-    (goal) => !sessionByGoal.has(goal.id) && isDayEditable(goal, date, today)
-  );
+  const candidates = skipped
+    ? []
+    : data.candidates.filter(
+        (goal) =>
+          !sessionByGoal.has(goal.id) && isDayEditable(goal, date, today)
+      );
 
   return {
-    readOnly: !isWithinLastLogicalDays(date, today),
+    readOnly: skipped || !isWithinLastLogicalDays(date, today),
+    skipped,
     expectations,
     weekly,
     extras,
@@ -389,7 +379,6 @@ const DayRow = ({
             session={session}
             onSave={(values) => {
               onUpdate(values);
-              close();
             }}
             onRemove={() => {
               onRemove();
@@ -458,7 +447,6 @@ const rowActions = (
   onUpdate: (values: SessionDetailValues) => {
     if (session) {
       updateLocalSession(session.id, values);
-      toast.success("Saved");
     }
   },
   onRemove: () => {
@@ -468,6 +456,37 @@ const rowActions = (
     }
   },
 });
+
+const DayNotices = ({
+  skipped,
+  readOnly,
+}: {
+  skipped: boolean;
+  readOnly: boolean;
+}) => {
+  if (skipped) {
+    return (
+      <output
+        aria-live="polite"
+        className="text-muted-foreground mt-3 block text-sm"
+      >
+        No data for this date. The timezone change skipped it.
+      </output>
+    );
+  }
+  if (readOnly) {
+    return (
+      <output
+        id="read-only-note"
+        aria-live="polite"
+        className="text-muted-foreground mt-3 block text-sm"
+      >
+        This day is read-only.
+      </output>
+    );
+  }
+  return null;
+};
 
 const DayPage = () => {
   const { date } = Route.useParams();
@@ -497,7 +516,7 @@ const DayPage = () => {
     cacheServerSessions(remote.weekSessions);
     cacheDayDetail(remote);
     // The local store is the source after its server cache is seeded.
-    // eslint-disable-next-line react/set-state-in-effect -- hydration flag for the offline overlay
+    // oxlint-disable-next-line react/set-state-in-effect -- hydration flag for the offline overlay
     setHydratedDate(remote.date);
   }, [remote]);
 
@@ -563,15 +582,7 @@ const DayPage = () => {
         {formatLogicalDate(date)}
       </h1>
 
-      {view.readOnly ? (
-        <output
-          id="read-only-note"
-          aria-live="polite"
-          className="text-muted-foreground mt-3 block text-sm"
-        >
-          This day is read-only.
-        </output>
-      ) : null}
+      <DayNotices skipped={view.skipped} readOnly={view.readOnly} />
 
       {stale ? (
         <output
@@ -619,11 +630,12 @@ const DayPage = () => {
         <h2 id="day-list-heading" className="sr-only">
           This day
         </h2>
-        {view.isEmpty ? (
+        {view.isEmpty && !view.skipped ? (
           <p className="text-muted-foreground text-sm">
             Nothing was expected this day.
           </p>
-        ) : (
+        ) : null}
+        {view.isEmpty ? null : (
           <ul className="space-y-2">
             {view.expectations.map((entry) => (
               <DayRow

@@ -258,6 +258,28 @@ const daysBetween = (start: string, end: string): number =>
       86_400_000
   ) + 1;
 
+const weekBlockStatus = ({
+  target,
+  transition,
+  activeDays,
+  sessions,
+  completed,
+}: {
+  target: number | null;
+  transition: boolean;
+  activeDays: number;
+  sessions: number;
+  completed: boolean;
+}): GoalWeekStatus => {
+  if (!target || transition || activeDays < target) {
+    return "not_scored";
+  }
+  if (sessions >= target) {
+    return "met";
+  }
+  return completed ? "missed" : "in_progress";
+};
+
 const buildWeekBlocks = (
   era: InternalEra,
   goal: StatsGoal,
@@ -281,9 +303,12 @@ const buildWeekBlocks = (
         ? goal.archivedOn
         : naturalEnd;
     const activeDays = activeEnd >= cursor ? daysBetween(cursor, activeEnd) : 0;
-    const skippedActive = [...skipped].filter(
-      (date) => date >= cursor && date <= activeEnd
-    ).length;
+    let skippedActive = 0;
+    for (const date of skipped) {
+      if (date >= cursor && date <= activeEnd) {
+        skippedActive += 1;
+      }
+    }
     const activeDayCount = Math.max(0, activeDays - skippedActive);
     let sessionCount = 0;
     for (const date of sessionsByDate.keys()) {
@@ -292,17 +317,13 @@ const buildWeekBlocks = (
       }
     }
     const completed = naturalEnd < today;
-
-    let status: GoalWeekStatus;
-    if (!target || transition || activeDayCount < target) {
-      status = "not_scored";
-    } else if (sessionCount >= target) {
-      status = "met";
-    } else if (completed) {
-      status = "missed";
-    } else {
-      status = "in_progress";
-    }
+    const status = weekBlockStatus({
+      target,
+      transition,
+      activeDays: activeDayCount,
+      sessions: sessionCount,
+      completed,
+    });
 
     blocks.push({
       start: cursor,
@@ -590,10 +611,7 @@ export const goalStats = ({
   const blocksByEra = new Map<InternalEra, GoalWeek[]>();
   for (const era of eras) {
     if (era.unit === "week") {
-      blocksByEra.set(
-        era,
-        buildWeekBlocks(era, goal, byDate, today, skipped)
-      );
+      blocksByEra.set(era, buildWeekBlocks(era, goal, byDate, today, skipped));
     }
   }
 
@@ -648,14 +666,7 @@ export const goalStats = ({
     eras: eraStats,
     sessions: activeSessions.length,
     minutes: minutesOf(activeSessions),
-    days: buildDays(
-      goal,
-      byDate,
-      historyEnd,
-      today,
-      weekStartsOn,
-      skipped
-    ),
+    days: buildDays(goal, byDate, historyEnd, today, weekStartsOn, skipped),
     weeks: currentWeeks,
   };
 };

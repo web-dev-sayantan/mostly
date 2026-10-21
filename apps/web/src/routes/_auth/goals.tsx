@@ -1,4 +1,5 @@
 import type { GoalDto } from "@mostly/api/routers/goals";
+import { comparePriority } from "@mostly/domain";
 import { Button } from "@mostly/ui/components/button";
 import { cn } from "@mostly/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -12,19 +13,39 @@ import {
   cadenceSummary,
   effectiveCadence,
   isArchived,
-  localToday,
   timingNote,
 } from "@/lib/goals";
 import { useOnline } from "@/lib/online";
+import { useLogicalToday } from "@/lib/use-logical-today";
 import { orpc } from "@/utils/orpc";
 
 type Filter = "active" | "archived";
 type EditorState = { goal: GoalDto | null } | null;
 
-const PRIORITY_RANK: Record<GoalDto["priority"], number> = {
-  high: 0,
-  medium: 1,
-  low: 2,
+const EditorSlot = ({
+  editor,
+  today,
+  onClose,
+}: {
+  editor: EditorState;
+  today: string | null;
+  onClose: () => void;
+}) => {
+  if (!editor) {
+    return null;
+  }
+  if (!today) {
+    return <p className="text-muted-foreground mt-6 text-sm">Loading goals…</p>;
+  }
+  return (
+    <GoalEditor
+      key={editor.goal?.id ?? "new"}
+      goal={editor.goal}
+      today={today}
+      onClose={onClose}
+      onDone={onClose}
+    />
+  );
 };
 
 const GoalRow = ({
@@ -104,7 +125,8 @@ const GoalsPage = () => {
   const editorTrigger = useRef<HTMLButtonElement | null>(null);
   const newGoalTrigger = useRef<HTMLButtonElement | null>(null);
   const online = useOnline();
-  const today = localToday();
+  const logicalToday = useLogicalToday();
+  const today = logicalToday ?? "";
   const goalsQuery = useQuery(orpc.goals.list.queryOptions());
 
   const openEditor = (goal: GoalDto | null, trigger: HTMLButtonElement) => {
@@ -132,7 +154,7 @@ const GoalsPage = () => {
     )
     .toSorted(
       (a, b) =>
-        PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+        comparePriority(a.priority, b.priority) ||
         a.createdAt.localeCompare(b.createdAt)
     );
 
@@ -160,14 +182,8 @@ const GoalsPage = () => {
         </output>
       )}
 
-      {editor ? (
-        <GoalEditor
-          key={editor.goal?.id ?? "new"}
-          goal={editor.goal}
-          onClose={closeEditor}
-          onDone={closeEditor}
-        />
-      ) : (
+      <EditorSlot editor={editor} today={logicalToday} onClose={closeEditor} />
+      {editor ? null : (
         <>
           <fieldset className="border-border mt-4 inline-flex rounded-full border p-1">
             <legend className="sr-only">Goal status</legend>

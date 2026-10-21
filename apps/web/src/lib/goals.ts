@@ -1,5 +1,5 @@
 import type { GoalDto } from "@mostly/api/routers/goals";
-import { resolveSchedule } from "@mostly/domain";
+import { addLogicalDays, resolveSchedule } from "@mostly/domain";
 import type { Cadence, Weekday } from "@mostly/domain";
 
 export const GOAL_COLORS = [
@@ -59,21 +59,12 @@ const DAY_MONTH = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-export const localDate = (now = new Date()): string =>
-  `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-    now.getDate()
-  ).padStart(2, "0")}`;
-
-/** shortcut: wall-clock day until #4's logical day settings reach the client. */
-export const localToday = (): string => localDate();
-
-/** Today, or tomorrow once the 9:30 PM default reminder time has passed. */
-export const defaultStartDate = (now = new Date()): string => {
-  const start = new Date(now);
+/** Today, or tomorrow once the 9:30 PM reminder time has passed. */
+export const defaultStartDate = (today: string, now = new Date()): string => {
   if (now.getHours() * 60 + now.getMinutes() >= 21 * 60 + 30) {
-    start.setDate(start.getDate() + 1);
+    return addLogicalDays(today, 1);
   }
-  return localDate(start);
+  return today;
 };
 
 export const formatDayMonth = (date: string): string =>

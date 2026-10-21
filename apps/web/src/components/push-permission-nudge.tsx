@@ -1,16 +1,13 @@
 import { Button } from "@mostly/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { useLocalSessions } from "@/lib/offline";
 import {
   enablePushReminders,
-  isInstalledApp,
-  localPushEndpoint,
-  pushPermission,
-  pushPlatform,
   REMINDER_NUDGE_KEY,
+  usePushDevice,
 } from "@/lib/push";
 import { orpc } from "@/utils/orpc";
 
@@ -32,25 +29,16 @@ export const PushPermissionNudge = () => {
   const [endpoint, setEndpoint] = useState<string | null>(null);
   const [hidden, setHidden] = useState(dismissed);
   const [working, setWorking] = useState(false);
+  const device = usePushDevice();
+  const currentEndpoint = endpoint ?? device.endpoint;
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      const value = await localPushEndpoint();
-      if (active) {
-        setEndpoint(value);
-      }
-    };
-    load();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  if (pushPlatform() !== "ios" || !isInstalledApp() || hidden) {
-    return null;
-  }
-  if (pushPermission() !== "default" || sessions.length === 0) {
+  if (
+    device.platform !== "ios" ||
+    !device.installed ||
+    hidden ||
+    device.permission !== "default" ||
+    sessions.length === 0
+  ) {
     return null;
   }
   if (!overviewQuery.data?.enabled) {
@@ -85,7 +73,7 @@ export const PushPermissionNudge = () => {
   };
 
   // A stored endpoint means this device already has push.
-  if (endpoint) {
+  if (currentEndpoint) {
     return null;
   }
 
@@ -105,7 +93,9 @@ export const PushPermissionNudge = () => {
           type="button"
           className="min-h-11 rounded-full px-4 text-sm"
           disabled={working}
-          onClick={enable}
+          onClick={() => {
+            void enable();
+          }}
         >
           Turn on reminders
         </Button>

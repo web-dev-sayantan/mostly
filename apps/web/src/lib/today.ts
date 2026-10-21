@@ -2,21 +2,16 @@ import type { GoalDto } from "@mostly/api/routers/goals";
 import type { Cadence, SettingVersion } from "@mostly/domain";
 import {
   addLogicalDays,
+  comparePriority,
   isExpectedOn,
-  logicalDate,
   resolveSchedule,
-  settingsForDate,
+  resolveSettingsForNow,
   weekEndOf,
   weekStartOf,
 } from "@mostly/domain";
 
 import type { LocalSession } from "./offline/store";
-
-const PRIORITY_RANK: Record<GoalDto["priority"], number> = {
-  high: 0,
-  medium: 1,
-  low: 2,
-};
+import { NOT_SCORED_COPY } from "./stats-format";
 
 export interface TodayGoal {
   goal: GoalDto;
@@ -49,7 +44,7 @@ export interface TodayView {
 }
 
 const byPriorityThenCreation = (a: GoalDto, b: GoalDto): number =>
-  PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+  comparePriority(a.priority, b.priority) ||
   a.createdAt.localeCompare(b.createdAt) ||
   a.id.localeCompare(b.id);
 
@@ -201,7 +196,7 @@ export const todayProgressCopy = ({
 
 export const weeklyTargetCopy = (weekly: WeeklyGoal): string => {
   if (!weekly.scored) {
-    return "Not enough days this week";
+    return NOT_SCORED_COPY;
   }
   if (weekly.met) {
     return "Target met";
@@ -236,18 +231,8 @@ export const resolveTodaySettings = <Version extends SettingVersion>(
     return null;
   }
 
-  const timeOf = (version: Version) => ({
-    timeZone: version.timeZone,
-    rolloverHour: version.dayRolloverHour,
+  return resolveSettingsForNow(sorted, now, {
+    timeZone: latest.timeZone,
+    rolloverHour: latest.dayRolloverHour,
   });
-
-  let today = logicalDate(now, timeOf(latest));
-  let current = settingsForDate(sorted, today) ?? latest;
-  const corrected = logicalDate(now, timeOf(current));
-  if (corrected !== today) {
-    current = settingsForDate(sorted, corrected) ?? current;
-    today = corrected;
-  }
-
-  return { today, current };
 };

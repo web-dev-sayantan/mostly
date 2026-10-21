@@ -1,14 +1,8 @@
 import { reminderCopy } from "@mostly/domain";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 
-import {
-  isInstalledApp,
-  localPushEndpoint,
-  pushPermission,
-  pushPlatform,
-} from "@/lib/push";
+import { canEnablePush, isPushReady, usePushDevice } from "@/lib/push";
 import { orpc } from "@/utils/orpc";
 
 /** A next-open nudge when the browser cannot receive a background push. */
@@ -17,34 +11,21 @@ export const TodayReminderFallback = () => {
     ...orpc.reminders.overview.queryOptions(),
     meta: { suppressErrorToast: true },
   });
-  const [endpoint, setEndpoint] = useState<string | null>(null);
-  const permission = pushPermission();
-  const platform = pushPlatform();
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      const value = await localPushEndpoint();
-      if (active) {
-        setEndpoint(value);
-      }
-    };
-    load();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { endpoint, permission, platform, installed } = usePushDevice();
 
   const overview = overviewQuery.data;
-  const pushReady =
-    Boolean(overview?.configured) &&
-    permission === "granted" &&
-    endpoint !== null &&
-    overview?.deliveredToday?.status !== "failed";
-  const canStillEnable =
-    Boolean(overview?.configured) &&
-    permission === "default" &&
-    (platform !== "ios" || isInstalledApp());
+  const pushReady = isPushReady({
+    configured: overview?.configured,
+    permission,
+    endpoint,
+    deliveredStatus: overview?.deliveredToday?.status,
+  });
+  const canStillEnable = canEnablePush({
+    configured: overview?.configured,
+    permission,
+    platform,
+    installed,
+  });
   const show =
     overview?.enabled &&
     overview.openCount > 0 &&

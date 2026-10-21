@@ -31,9 +31,17 @@ const goal = (overrides: Partial<GoalDto> = {}): GoalDto => ({
 });
 
 describe("goal presentation", () => {
-  it("defaults a new start date to today, or tomorrow after 9:30 PM", () => {
-    expect(defaultStartDate(new Date(2026, 9, 20, 21, 29))).toBe("2026-10-20");
-    expect(defaultStartDate(new Date(2026, 9, 20, 21, 30))).toBe("2026-10-21");
+  it("defaults a new start date to the logical today, or tomorrow after 9:30 PM", () => {
+    expect(defaultStartDate("2026-10-20", new Date(2026, 9, 20, 21, 29))).toBe(
+      "2026-10-20"
+    );
+    expect(defaultStartDate("2026-10-20", new Date(2026, 9, 20, 21, 30))).toBe(
+      "2026-10-21"
+    );
+    // A logical yesterday (before rollover) still advances from that day.
+    expect(defaultStartDate("2026-10-19", new Date(2026, 9, 20, 23, 0))).toBe(
+      "2026-10-20"
+    );
   });
 
   it("summarizes each cadence", () => {

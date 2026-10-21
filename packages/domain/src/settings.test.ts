@@ -64,7 +64,7 @@ describe("settingsForDate", () => {
 
 describe("resolveSettingsForNow", () => {
   it("keeps the current day closed under the old rollover on a 4 to 6 transition", () => {
-    const versions: SettingVersion[] = [
+    const history: SettingVersion[] = [
       {
         effectiveFrom: "2026-10-01",
         timeZone: "UTC",
@@ -81,24 +81,24 @@ describe("resolveSettingsForNow", () => {
     const hint = { timeZone: "UTC", rolloverHour: 4 };
 
     expect(
-      resolveSettingsForNow(versions, new Date("2026-10-22T03:30:00Z"), hint)
+      resolveSettingsForNow(history, new Date("2026-10-22T03:30:00Z"), hint)
     ).toMatchObject({ today: "2026-10-21" });
     // 04:30 is past the old rollover: the new day opens under the old rule
     // and the 6 AM rollover applies from the following day.
     expect(
-      resolveSettingsForNow(versions, new Date("2026-10-22T04:30:00Z"), hint)
+      resolveSettingsForNow(history, new Date("2026-10-22T04:30:00Z"), hint)
     ).toMatchObject({ today: "2026-10-22" });
     expect(
-      resolveSettingsForNow(versions, new Date("2026-10-22T05:30:00Z"), hint)
+      resolveSettingsForNow(history, new Date("2026-10-22T05:30:00Z"), hint)
     ).toMatchObject({ today: "2026-10-22" });
     expect(
-      resolveSettingsForNow(versions, new Date("2026-10-23T04:30:00Z"), {
+      resolveSettingsForNow(history, new Date("2026-10-23T04:30:00Z"), {
         timeZone: "UTC",
         rolloverHour: 6,
       })
     ).toMatchObject({ today: "2026-10-22" });
     expect(
-      resolveSettingsForNow(versions, new Date("2026-10-23T06:00:00Z"), {
+      resolveSettingsForNow(history, new Date("2026-10-23T06:00:00Z"), {
         timeZone: "UTC",
         rolloverHour: 6,
       })

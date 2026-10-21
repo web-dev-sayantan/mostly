@@ -1,10 +1,8 @@
-import {
-  addLogicalDays,
-  weekdayOf,
-  type Weekday,
-} from "./logical-day";
+import type { Weekday } from "./logical-day";
+import { addLogicalDays as addDays, weekdayOf } from "./logical-day";
 
 export type { Weekday } from "./logical-day";
+export { addLogicalDays as addDays, weekdayOf } from "./logical-day";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 
@@ -34,10 +32,6 @@ export const isIsoDate = (value: string): boolean => {
     !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
   );
 };
-
-export const addDays = addLogicalDays;
-
-export { weekdayOf };
 
 export const normalizeCadence = (cadence: Cadence): Cadence => {
   if (cadence.type !== "weekdays") {

@@ -76,7 +76,7 @@ const AppShell = ({ children }: { children: ReactNode }) => (
     </main>
 
     <nav
-      aria-label="Primary"
+      aria-label="Bottom navigation"
       className="bg-background/95 fixed inset-x-0 bottom-0 z-20 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
       <ul className="mx-auto grid w-full max-w-[960px] grid-cols-4 pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
