@@ -36,14 +36,14 @@ const DOT_CLASS: Record<ProgressGoalCard["days"][number]["status"], string> = {
   none: "border-border bg-transparent",
 };
 
-const weekLabel = (status: ProgressWeekStatus): string => {
-  if (status === "met") {
-    return "Target met";
+const weekLabel = (week: ProgressWeekCell): string => {
+  if (week.status === "met") {
+    return `Target met (${week.sessions} sessions)`;
   }
-  if (status === "partial") {
-    return "Some sessions";
+  if (week.status === "partial") {
+    return `${week.sessions} of ${week.target} sessions`;
   }
-  if (status === "not_scored") {
+  if (week.status === "not_scored") {
     return "Not enough days this week";
   }
   return "No session";
@@ -108,7 +108,7 @@ const WeekCells = ({
       {weeks
         .map(
           (week) =>
-            `${formatDayMonth(week.weekStart)} to ${formatDayMonth(week.weekEnd)} ${weekLabel(week.status)}`
+            `${formatDayMonth(week.weekStart)} to ${formatDayMonth(week.weekEnd)} ${weekLabel(week)}`
         )
         .join("; ")}
       .
