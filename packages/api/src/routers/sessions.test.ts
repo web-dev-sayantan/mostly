@@ -51,6 +51,8 @@ const sessionOp = (
   ...overrides,
 });
 
+const NOW = () => new Date("2026-10-20T12:00:00Z");
+
 describe("sessionsRouter", () => {
   let db: Database;
   let close: () => void;
@@ -72,14 +74,15 @@ describe("sessionsRouter", () => {
       email: "bob@example.com",
       name: "Bob",
     });
+    const now = NOW;
     return {
       alice,
       bob,
       aliceClient: createRouterClient(appRouter, {
-        context: createTestContext(db, alice),
+        context: createTestContext(db, alice, now),
       }),
       bobClient: createRouterClient(appRouter, {
-        context: createTestContext(db, bob),
+        context: createTestContext(db, bob, now),
       }),
     };
   };

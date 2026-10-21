@@ -38,7 +38,8 @@ export type SyncRejection =
   | "goal_not_found"
   | "goal_deleted"
   | "before_start"
-  | "after_archive";
+  | "after_archive"
+  | "read_only";
 
 export const CONFLICT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 

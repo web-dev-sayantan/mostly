@@ -34,7 +34,7 @@ const timeZoneSchema = z
   .max(64)
   .refine(isTimeZone, "Unknown timezone");
 
-const loadHistory = (db: Database, userId: string) =>
+export const loadHistory = (db: Database, userId: string) =>
   db
     .select()
     .from(userSettingVersion)
@@ -44,7 +44,7 @@ const loadHistory = (db: Database, userId: string) =>
       asc(userSettingVersion.createdAt)
     );
 
-const loadCache = async (
+export const loadCache = async (
   db: Database,
   userId: string
 ): Promise<SettingValues | null> => {
@@ -134,7 +134,7 @@ const seedHistory = async (
  * Resolve today and the version in effect. The cache is a hint for the first pass because a
  * timezone change can move which logical date the same instant belongs to.
  */
-const resolveCurrent = (
+export const resolveCurrent = (
   history: SettingRow[],
   now: Date,
   cached: SettingValues | null
@@ -161,6 +161,22 @@ const resolveCurrent = (
   }
 
   return { today, current };
+};
+
+/** Today under the user's settings, with sensible defaults before history exists. */
+export const currentLogicalDay = (
+  history: SettingRow[],
+  cached: SettingValues | null,
+  now: Date
+): string => {
+  if (history.length > 0) {
+    return resolveCurrent(history, now, cached).today;
+  }
+
+  return logicalDate(now, {
+    timeZone: cached?.timeZone ?? FALLBACK_TIME_ZONE,
+    rolloverHour: cached?.dayRolloverHour ?? DEFAULT_DAY_ROLLOVER_HOUR,
+  });
 };
 
 const toDto = (row: SettingRow) => ({

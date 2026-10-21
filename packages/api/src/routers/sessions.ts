@@ -11,6 +11,7 @@ import type {
 import {
   MOODS,
   createSessionConflict,
+  isDayEditable,
   rejectSessionOp,
   resolveSessionOp,
 } from "@mostly/domain";
@@ -18,6 +19,7 @@ import { and, asc, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure } from "../procedures";
+import { currentLogicalDay, loadCache, loadHistory } from "./settings";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 
@@ -113,9 +115,12 @@ export const sessionsRouter = {
 
   sync: protectedProcedure
     .input(z.object({ ops: z.array(opSchema) }))
-    .handler(({ context, input }): Promise<SessionSyncResult> => {
+    .handler(async ({ context, input }): Promise<SessionSyncResult> => {
       const userId = context.session.user.id;
       const now = Date.now();
+      const cached = await loadCache(context.db, userId);
+      const history = await loadHistory(context.db, userId);
+      const today = currentLogicalDay(history, cached, context.now());
       const goalIds = [...new Set(input.ops.map((op) => op.goalId))];
       const sorted = input.ops.toSorted(
         (a, b) =>
@@ -152,8 +157,16 @@ export const sessionsRouter = {
               : null
           );
 
-          if (rejection) {
-            rejected.push({ opId: op.opId, reason: rejection });
+          if (!goalRow || rejection) {
+            rejected.push({
+              opId: op.opId,
+              reason: rejection ?? "goal_not_found",
+            });
+            continue;
+          }
+
+          if (!isDayEditable(goalRow, op.logicalDate, today)) {
+            rejected.push({ opId: op.opId, reason: "read_only" });
             continue;
           }
 
