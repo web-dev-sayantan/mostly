@@ -40,6 +40,8 @@ export interface GoalRecentDayDto {
   minutes: number | null;
   mood: Mood | null;
   note: string | null;
+  sessionId: string | null;
+  updatedAt: number | null;
   readOnly: boolean;
 }
 
@@ -71,7 +73,8 @@ const recentDaysFor = (
   unit: StreakUnit,
   historyEnd: string,
   today: string,
-  readOnly: boolean
+  readOnly: boolean,
+  sessionByDate: ReadonlyMap<string, { id: string; updatedAt: Date }>
 ): GoalRecentDayDto[] => {
   const start = addLogicalDays(historyEnd, -6);
 
@@ -84,14 +87,19 @@ const recentDaysFor = (
         ? day.status === "done"
         : day.status === "done" || day.status === "missed";
     })
-    .map((day) => ({
-      date: day.date,
-      status: day.status === "done" ? "done" : "missed",
-      minutes: day.minutes,
-      mood: day.mood,
-      note: day.note,
-      readOnly: readOnly || !isWithinLastLogicalDays(day.date, today),
-    }));
+    .map((day) => {
+      const row = sessionByDate.get(day.date);
+      return {
+        date: day.date,
+        status: day.status === "done" ? "done" : "missed",
+        minutes: day.minutes,
+        mood: day.mood,
+        note: day.note,
+        sessionId: row?.id ?? null,
+        updatedAt: row?.updatedAt.getTime() ?? null,
+        readOnly: readOnly || !isWithinLastLogicalDays(day.date, today),
+      };
+    });
 };
 
 export const statsRouter = {
@@ -140,6 +148,9 @@ export const statsRouter = {
             isNull(session.deletedAt)
           )
         );
+      const sessionByDate = new Map(
+        sessions.map((row) => [row.logicalDate, row])
+      );
 
       const record = goalStats({
         goal: {
@@ -199,7 +210,8 @@ export const statsRouter = {
           record.unit,
           record.historyEnd,
           clock.today,
-          readOnly
+          readOnly,
+          sessionByDate
         ),
       };
     }),

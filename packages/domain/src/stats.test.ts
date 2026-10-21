@@ -178,6 +178,28 @@ describe("goalStats weekday goals", () => {
     expect(stats.currentStreak).toBe(1);
     expect(stats.bestStreak).toBe(1);
   });
+
+  it("does not let an extra session on an off day extend the streak", () => {
+    const stats = statsFor({
+      startDate: "2026-01-05",
+      today: "2026-01-13",
+      versions: [
+        version("2026-01-05", { type: "weekdays", weekdays: [1, 3, 5] }),
+      ],
+      durations: sessions(
+        "2026-01-05",
+        "2026-01-07",
+        "2026-01-09",
+        "2026-01-12",
+        "2026-01-13"
+      ),
+    });
+
+    // Tue 13 is an extra, not an expectation.
+    expect(stats.currentStreak).toBe(4);
+    expect(stats.consistency).toMatchObject({ done: 4, expected: 4 });
+    expect(stats.sessions).toBe(5);
+  });
 });
 
 const weekly = (startDate: string, target: number) =>
@@ -309,6 +331,26 @@ describe("goalStats weekly target outcomes", () => {
     expect(stats.weeks.at(-1)?.status).toBe("in_progress");
     expect(stats.currentStreak).toBe(2);
     expect(stats.bestStreak).toBe(2);
+  });
+
+  it("recomputes a completed week when a backfilled session reaches the target", () => {
+    const missed = statsFor({
+      startDate: "2026-01-05",
+      today: "2026-01-13",
+      versions: [weekly("2026-01-05", 3)],
+      durations: sessions("2026-01-05", "2026-01-06"),
+    });
+    const met = statsFor({
+      startDate: "2026-01-05",
+      today: "2026-01-13",
+      versions: [weekly("2026-01-05", 3)],
+      durations: sessions("2026-01-05", "2026-01-06", "2026-01-07"),
+    });
+
+    expect(missed.weeks[0]?.status).toBe("missed");
+    expect(missed.consistency).toMatchObject({ done: 0, expected: 1 });
+    expect(met.weeks[0]?.status).toBe("met");
+    expect(met.consistency).toMatchObject({ done: 1, expected: 1 });
   });
 
   it("applies a target change per week without resetting the era", () => {
