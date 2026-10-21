@@ -306,16 +306,10 @@ const weeklyRangeCounts = ({
 
   for (const week of weekSegments(settings, rangeStart, rangeEnd)) {
     const inRange = week.end <= rangeEnd && week.end >= rangeStart;
-    const cadence = inRange && !week.transition
-      ? cadenceOn(goal, week.start)
-      : null;
+    const cadence =
+      inRange && !week.transition ? cadenceOn(goal, week.start) : null;
     if (cadence?.type === "weekly_target") {
-      const activeDays = activeDaysInWeek(
-        goal,
-        week.start,
-        week.end,
-        skipped
-      );
+      const activeDays = activeDaysInWeek(goal, week.start, week.end, skipped);
       if (activeDays >= cadence.target) {
         expected += 1;
         if (
@@ -640,8 +634,7 @@ export const buildProgress = ({
       },
       sessions: sessions
         .filter(
-          (entry) =>
-            entry.goalId === goal.id && !skipped.has(entry.logicalDate)
+          (entry) => entry.goalId === goal.id && !skipped.has(entry.logicalDate)
         )
         .map((entry) => ({
           logicalDate: entry.logicalDate,

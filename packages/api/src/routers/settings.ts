@@ -258,7 +258,7 @@ export const settingsRouter = {
         const effectiveDates = plan.versions.map(
           (version) => version.effectiveFrom
         );
-        const first = plan.versions[0];
+        const [first] = plan.versions;
         const skippedDates =
           plan.timeZoneChanged && first
             ? skippedDatesForTimeZoneChange({

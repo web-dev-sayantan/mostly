@@ -529,9 +529,9 @@ describe("progress week-start history", () => {
       skippedDates: ["2026-10-07"],
     });
 
-    expect(result.heatmap.days.find((day) => day.date === "2026-10-07")).toMatchObject(
-      { expected: 0, done: 0, extras: 0, intensity: "neutral" }
-    );
+    expect(
+      result.heatmap.days.find((day) => day.date === "2026-10-07")
+    ).toMatchObject({ expected: 0, done: 0, extras: 0, intensity: "neutral" });
     expect(
       result.weekly[0]?.weeks.find((week) => week.weekStart === "2026-10-05")
     ).toMatchObject({

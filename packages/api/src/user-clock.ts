@@ -1,7 +1,11 @@
 import type { Database } from "@mostly/db";
 import { user } from "@mostly/db/schema/auth";
 import { userSettingVersion } from "@mostly/db/schema/settings";
-import { logicalDate, resolveSettingsForNow, skippedDatesOf } from "@mostly/domain";
+import {
+  logicalDate,
+  resolveSettingsForNow,
+  skippedDatesOf,
+} from "@mostly/domain";
 import { asc, eq } from "drizzle-orm";
 
 const DEFAULT_WEEK_STARTS_ON = 1;

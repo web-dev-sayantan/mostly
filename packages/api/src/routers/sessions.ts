@@ -1,6 +1,7 @@
 import type { Database } from "@mostly/db";
 import { goal } from "@mostly/db/schema/goals";
-import { session } from "@mostly/db/schema/sessions";import type {
+import { session } from "@mostly/db/schema/sessions";
+import type {
   SessionConflict,
   SessionOp,
   SessionRecord,
@@ -165,7 +166,10 @@ export const sessionsRouter = {
             continue;
           }
 
-          if (!isDayEditable(goalRow, op.logicalDate, today) || skipped.has(op.logicalDate)) {
+          if (
+            !isDayEditable(goalRow, op.logicalDate, today) ||
+            skipped.has(op.logicalDate)
+          ) {
             rejected.push({ opId: op.opId, reason: "read_only" });
             continue;
           }
