@@ -1,7 +1,9 @@
 export {
+  bindOfflineUser,
   cacheServerSessions,
   clearOfflineData,
   deleteLocalSession,
+  getSyncStatus,
   markSessionDone,
   retrySync,
   syncNow,

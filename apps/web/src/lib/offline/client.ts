@@ -2,6 +2,7 @@ import { clearTodayCache } from "@/lib/today-cache";
 import { client } from "@/utils/orpc";
 
 import { createMemoryStorage, createOfflineStore } from "./store";
+import type { SyncStatus } from "./sync-engine";
 import { createSyncEngine } from "./sync-engine";
 
 const browserStorage = (() => {
@@ -33,8 +34,11 @@ export const clearOfflineData = (): void => {
   offlineStore.clear();
   clearTodayCache();
 };
+export const bindOfflineUser = (userId: string): boolean =>
+  offlineStore.bindUser(userId);
 export const syncNow = (): Promise<void> => syncEngine.syncNow();
 export const retrySync = (): void => syncEngine.retry();
+export const getSyncStatus = (): SyncStatus => syncEngine.getStatus();
 
 let started = false;
 

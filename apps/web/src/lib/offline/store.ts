@@ -62,6 +62,8 @@ export interface OfflineStore {
   getQueue: () => SessionOp[];
   getConflicts: () => SessionConflict[];
   getLastSyncedAt: () => number | null;
+  /** True when this device belonged to another account and was cleared. */
+  bindUser: (userId: string) => boolean;
   cacheServerSessions: (records: SessionRecord[]) => void;
   applySyncResult: (result: SessionSyncResult, syncedAt: number) => void;
   clear: () => void;
@@ -152,11 +154,12 @@ export const createOfflineStore = (
     OFFLINE_STORAGE_KEYS.conflicts,
     []
   );
-  let meta = readJson<{ lastSyncedAt: number | null }>(
+  let meta = readJson<{ lastSyncedAt: number | null; userId?: string | null }>(
     storage,
     OFFLINE_STORAGE_KEYS.meta,
     {
       lastSyncedAt: null,
+      userId: null,
     }
   );
   const listeners = new Set<() => void>();
@@ -244,6 +247,20 @@ export const createOfflineStore = (
 
   const nextUpdatedAt = (previous: number): number =>
     Math.max(now(), previous + 1);
+
+  const wipe = (): void => {
+    sessions = [];
+    queue = [];
+    conflicts = [];
+    meta = { lastSyncedAt: null, userId: null };
+    for (const key of Object.values(OFFLINE_STORAGE_KEYS)) {
+      try {
+        storage.removeItem(key);
+      } catch {
+        // Nothing else to clear.
+      }
+    }
+  };
 
   return {
     markSessionDone({ goalId, logicalDate }) {
@@ -341,6 +358,27 @@ export const createOfflineStore = (
       return meta.lastSyncedAt;
     },
 
+    bindUser(userId) {
+      if (meta.userId === userId) {
+        return false;
+      }
+
+      if (meta.userId === null || meta.userId === undefined) {
+        meta = { ...meta, userId };
+        persistMeta();
+        notify();
+        return false;
+      }
+
+      // Another account owned this device. A deleted account signs back in with
+      // a new user id, so its queued writes are discarded here before replay.
+      wipe();
+      meta = { lastSyncedAt: null, userId };
+      persistMeta();
+      notify();
+      return true;
+    },
+
     cacheServerSessions(records) {
       for (const record of records) {
         if (record.deletedAt === null) {
@@ -425,17 +463,7 @@ export const createOfflineStore = (
     },
 
     clear() {
-      sessions = [];
-      queue = [];
-      conflicts = [];
-      meta = { lastSyncedAt: null };
-      for (const key of Object.values(OFFLINE_STORAGE_KEYS)) {
-        try {
-          storage.removeItem(key);
-        } catch {
-          // Nothing else to clear.
-        }
-      }
+      wipe();
       notify();
     },
 

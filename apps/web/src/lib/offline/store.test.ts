@@ -317,4 +317,50 @@ describe("offline store", () => {
     clock.now = 1000 + CONFLICT_TTL_MS;
     expect(store.getConflicts()).toHaveLength(0);
   });
+
+  it("keeps queued writes for the same account across auth expiry", () => {
+    const { store } = createStore();
+    store.bindUser("alice");
+    store.markSessionDone({ goalId: "goal-1", logicalDate: "2026-10-20" });
+
+    expect(store.bindUser("alice")).toBe(false);
+    expect(store.getQueue()).toHaveLength(1);
+    expect(store.getSessions()).toHaveLength(1);
+  });
+
+  it("clears cached data when a different account signs in", () => {
+    const storage = new MemoryStorage();
+    const first = createOfflineStore(storage, {
+      now: () => 1000,
+      id: () => "local-1",
+    });
+    first.bindUser("alice");
+    first.markSessionDone({ goalId: "goal-1", logicalDate: "2026-10-20" });
+    first.applySyncResult(
+      { applied: [], winners: [record()], conflicts: [], rejected: [] },
+      2000
+    );
+
+    const second = createOfflineStore(storage, {
+      now: () => 3000,
+      id: () => "local-2",
+    });
+    expect(second.bindUser("alice")).toBe(false);
+    expect(second.getQueue()).toHaveLength(1);
+    expect(second.getSessions()).toHaveLength(1);
+
+    // A deleted account signs back in as a new user id, so its old queue goes.
+    expect(second.bindUser("bob")).toBe(true);
+    expect(second.getQueue()).toHaveLength(0);
+    expect(second.getSessions()).toHaveLength(0);
+    expect(second.getLastSyncedAt()).toBeNull();
+  });
+
+  it("adopts a device with cached data but no bound account", () => {
+    const { store } = createStore();
+    store.markSessionDone({ goalId: "goal-1", logicalDate: "2026-10-20" });
+
+    expect(store.bindUser("alice")).toBe(false);
+    expect(store.getQueue()).toHaveLength(1);
+  });
 });
