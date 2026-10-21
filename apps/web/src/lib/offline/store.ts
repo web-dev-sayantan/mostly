@@ -19,6 +19,7 @@ export const OFFLINE_STORAGE_KEYS = {
   queue: "mostly:session-queue",
   conflicts: "mostly:sync-conflicts",
   meta: "mostly:sync-meta",
+  auth: "mostly:auth-known",
 } as const;
 
 export interface LocalSession {
