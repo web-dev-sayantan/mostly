@@ -89,6 +89,8 @@ export interface DayDetailDto {
   today: string;
   readOnly: boolean;
   weekStartsOn: number;
+  timeZone: string;
+  dayRolloverHour: number;
   expectations: DayExpectationDto[];
   extras: DayExtraDto[];
   weekly: DayWeeklyDto[];
@@ -288,6 +290,8 @@ export const daysRouter = {
         today,
         readOnly: resolution.readOnly,
         weekStartsOn: settings.weekStartsOn,
+        timeZone: settings.timeZone,
+        dayRolloverHour: settings.dayRolloverHour,
         expectations,
         extras,
         weekly,

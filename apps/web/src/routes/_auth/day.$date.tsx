@@ -8,6 +8,7 @@ import {
   isDayEditable,
   isIsoDate,
   isWithinLastLogicalDays,
+  logicalDate,
   weeklyOutcome,
 } from "@mostly/domain";
 import { Button } from "@mostly/ui/components/button";
@@ -153,9 +154,9 @@ const buildExtras = ({
 const buildDayView = (
   data: DayDetailDto,
   date: string,
-  knownSessions: readonly DisplaySession[]
+  knownSessions: readonly DisplaySession[],
+  today: string
 ): DayView => {
-  const { today } = data;
   const daySessions = knownSessions.filter(
     (session) => session.logicalDate === date
   );
@@ -460,6 +461,12 @@ const DayPage = () => {
   const cached = useMemo(() => cachedDayDetail(date), [date]);
   const [hydratedDate, setHydratedDate] = useState<string | null>(null);
   const [selectedGoal, setSelectedGoal] = useState("");
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const remote = query.data;
   useEffect(() => {
@@ -505,7 +512,14 @@ const DayPage = () => {
   const knownSessions: readonly DisplaySession[] = hydrated
     ? localSessions
     : data.weekSessions;
-  const view = buildDayView(data, date, knownSessions);
+  // Offline, advance the rollover locally so the 7-day lock still moves.
+  const today = stale
+    ? logicalDate(now, {
+        timeZone: data.timeZone,
+        rolloverHour: data.dayRolloverHour,
+      })
+    : data.today;
+  const view = buildDayView(data, date, knownSessions, today);
   const selected = view.candidates.some((goal) => goal.id === selectedGoal)
     ? selectedGoal
     : "";
