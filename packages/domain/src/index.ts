@@ -75,7 +75,27 @@ export type {
   StreakEra,
   StreakUnit,
 } from "./stats";
-export { goalStats, overallConsistency } from "./stats";
+export { goalStats, minutesOf, overallConsistency } from "./stats";
+export type {
+  BuildProgressInput,
+  ProgressDot,
+  ProgressDotStatus,
+  ProgressGoal,
+  ProgressGoalCard,
+  ProgressHeatmapDay,
+  ProgressIntensity,
+  ProgressPriority,
+  ProgressRange,
+  ProgressResult,
+  ProgressSession,
+  ProgressSettingsVersion,
+  ProgressToday,
+  ProgressTodayGoal,
+  ProgressWeekCell,
+  ProgressWeeklyRow,
+  ProgressWeekStatus,
+} from "./progress";
+export { buildProgress, PROGRESS_RANGES } from "./progress";
 export type {
   Mood,
   SessionConflict,
