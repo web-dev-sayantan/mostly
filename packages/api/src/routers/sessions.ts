@@ -17,7 +17,7 @@ import {
 import { and, asc, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
 
-import { protectedProcedure } from "../index";
+import { protectedProcedure } from "../procedures";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 
