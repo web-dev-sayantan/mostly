@@ -1,20 +1,13 @@
 import { goal } from "@mostly/db/schema/goals";
 import { session } from "@mostly/db/schema/sessions";
 import type { ProgressResult } from "@mostly/domain";
-import { buildProgress } from "@mostly/domain";
+import { buildProgress, comparePriority } from "@mostly/domain";
 import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure } from "../procedures";
 import { loadUserClock } from "../user-clock";
 import { loadGoalDto } from "./goals";
-import type { GoalDto } from "./goals";
-
-const PRIORITY_RANK: Record<GoalDto["priority"], number> = {
-  high: 0,
-  medium: 1,
-  low: 2,
-};
 
 const rangeSchema = z.union([z.literal(7), z.literal(30), z.literal(90)]);
 
@@ -52,7 +45,7 @@ export const progressRouter = {
       return buildProgress({
         goals: goalDtos.toSorted(
           (a, b) =>
-            PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+            comparePriority(a.priority, b.priority) ||
             a.createdAt.localeCompare(b.createdAt)
         ),
         sessions: sessions.map((row) => ({
@@ -63,6 +56,7 @@ export const progressRouter = {
         settings: clock.history,
         today: clock.today,
         range: input.range,
+        skippedDates: clock.skippedDates,
       });
     }),
 };

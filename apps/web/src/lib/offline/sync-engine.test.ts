@@ -187,6 +187,45 @@ describe("sync engine", () => {
     expect(store.getQueue()).toHaveLength(1);
   });
 
+  it("discards the queue and caches when the account was deleted", async () => {
+    const clock = { now: 5000 };
+    const store = createOfflineStore(createMemoryStorage(), {
+      now: () => clock.now,
+      id: () => crypto.randomUUID(),
+    });
+    store.bindUser("alice");
+    store.markSessionDone({ goalId: "goal-1", logicalDate: "2026-10-20" });
+    let cleared = false;
+    const engine = createSyncEngine({
+      store,
+      now: () => clock.now,
+      server: {
+        sync: () =>
+          Promise.reject(
+            Object.assign(new Error("Unauthorized"), { code: "UNAUTHORIZED" })
+          ),
+      },
+      checkAccountDeleted: () => Promise.resolve(true),
+      onAccountDeleted: () => {
+        cleared = true;
+      },
+    });
+
+    await engine.syncNow();
+
+    expect(store.getQueue()).toHaveLength(0);
+    expect(store.getSessions()).toEqual([]);
+    expect(store.getConflicts()).toEqual([]);
+    expect(store.getLastSyncedAt()).toBeNull();
+    expect(cleared).toBe(true);
+    expect(engine.getStatus()).toMatchObject({
+      state: "synced",
+      pendingCount: 0,
+      authExpired: false,
+      accountDeleted: true,
+    });
+  });
+
   it("keeps queued sessions and recovers after auth is renewed", async () => {
     const { store, engine, respondTo } = setup();
     const op = queuedOp(store);

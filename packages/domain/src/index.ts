@@ -17,6 +17,8 @@ export {
   weekStartOf,
   weekdayOf,
 } from "./logical-day";
+export type { Priority } from "./priority";
+export { comparePriority, PRIORITY_RANK } from "./priority";
 export type {
   ReminderDue,
   ReminderGoal,

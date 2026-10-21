@@ -1,6 +1,7 @@
 import type { Database } from "@mostly/db";
 import {
   account as authAccount,
+  accountDeletion,
   authSession,
   user,
 } from "@mostly/db/schema/auth";
@@ -11,18 +12,20 @@ import {
 } from "@mostly/db/schema/reminders";
 import { session } from "@mostly/db/schema/sessions";
 import { userSettingVersion } from "@mostly/db/schema/settings";
-import type { Cadence, SettingVersion, Weekday } from "@mostly/domain";
+import type { SettingVersion } from "@mostly/domain";
 import {
   deriveOutcomes,
   EXPORT_SCHEMA_VERSION,
   logicalDate,
-  settingsForDate,
+  resolveSettingsForNow,
+  skippedDatesOf,
 } from "@mostly/domain";
 import { ORPCError } from "@orpc/server";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { protectedProcedure } from "../procedures";
+import { cadenceFromScheduleRow } from "../cadence";
+import { protectedProcedure, publicProcedure } from "../procedures";
 
 type SettingRow = typeof userSettingVersion.$inferSelect;
 type GoalRow = typeof goal.$inferSelect;
@@ -31,24 +34,14 @@ type SessionRow = typeof session.$inferSelect;
 
 const BACKUP_RETENTION_DAYS = 30;
 
-const cadenceOf = (row: ScheduleRow): Cadence => {
-  if (row.cadenceType === "weekdays") {
-    return {
-      type: "weekdays",
-      weekdays: (row.weekdays ?? []) as Weekday[],
-    };
-  }
-  if (row.cadenceType === "weekly_target") {
-    return { type: "weekly_target", target: row.weeklyTarget ?? 1 };
-  }
-  return { type: "daily" };
-};
+const cadenceOf = cadenceFromScheduleRow;
 
 const settingValues = (row: SettingRow): SettingVersion => ({
   effectiveFrom: row.effectiveFrom,
   timeZone: row.timeZone,
   weekStartsOn: row.weekStartsOn,
   dayRolloverHour: row.dayRolloverHour,
+  skippedDates: row.skippedDates ?? [],
 });
 
 /**
@@ -72,24 +65,19 @@ const resolveNow = (
     timeZone: profile.timeZone ?? "UTC",
     weekStartsOn: profile.weekStartsOn,
     dayRolloverHour: profile.dayRolloverHour,
+    skippedDates: [],
   };
 
-  let today = logicalDate(now, {
-    timeZone: fallback.timeZone,
-    rolloverHour: fallback.dayRolloverHour,
-  });
-  let current = settingsForDate(history, today) ?? fallback;
-
-  const corrected = logicalDate(now, {
-    timeZone: current.timeZone,
-    rolloverHour: current.dayRolloverHour,
-  });
-  if (corrected !== today) {
-    current = settingsForDate(history, corrected) ?? current;
-    today = corrected;
+  if (history.length === 0) {
+    return { today: fallback.effectiveFrom, current: fallback };
   }
 
-  return { today, current };
+  return (
+    resolveSettingsForNow(history, now, {
+      timeZone: profile.timeZone ?? "UTC",
+      rolloverHour: profile.dayRolloverHour,
+    }) ?? { today: fallback.effectiveFrom, current: fallback }
+  );
 };
 
 const loadVersions = (db: Database, goalIds: string[]) => {
@@ -227,16 +215,39 @@ export const accountRouter = {
         })),
         today,
         settings: history,
+        skippedDates: skippedDatesOf(history),
       }),
     };
   }),
+
+  status: publicProcedure
+    .input(z.object({ userId: z.string().min(1).max(128) }))
+    .handler(async ({ context, input }) => {
+      const [row] = await context.db
+        .select({ userId: accountDeletion.userId })
+        .from(accountDeletion)
+        .where(eq(accountDeletion.userId, input.userId));
+
+      return { deleted: Boolean(row) };
+    }),
 
   delete: protectedProcedure
     .input(z.object({ confirm: z.literal("DELETE") }))
     .handler(async ({ context }) => {
       const userId = context.session.user.id;
+      const now = context.now();
 
       await context.db.transaction(async (tx) => {
+        // The tombstone outlives the user row so an offline device can tell a
+        // deleted account (discard its queue) from an expired session (keep it).
+        await tx
+          .insert(accountDeletion)
+          .values({ userId, deletedAt: now })
+          .onConflictDoUpdate({
+            target: accountDeletion.userId,
+            set: { deletedAt: now },
+          });
+
         // Reminder rows are user-scoped; deleting them revokes every device
         // subscription before the user row cascades.
         await tx

@@ -1,8 +1,6 @@
 import type { Database } from "@mostly/db";
 import { goal } from "@mostly/db/schema/goals";
-import { session } from "@mostly/db/schema/sessions";
-import type {
-  Mood,
+import { session } from "@mostly/db/schema/sessions";import type {
   SessionConflict,
   SessionOp,
   SessionRecord,
@@ -14,6 +12,7 @@ import {
   isDayEditable,
   rejectSessionOp,
   resolveSessionOp,
+  skippedDatesOf,
 } from "@mostly/domain";
 import { and, asc, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
@@ -62,7 +61,7 @@ const toRecord = (row: SessionRow): SessionRecord => ({
   logicalDate: row.logicalDate,
   minutes: row.minutes,
   note: row.note,
-  mood: row.mood as Mood | null,
+  mood: row.mood,
   updatedAt: row.updatedAt.getTime(),
   deletedAt: row.deletedAt?.getTime() ?? null,
 });
@@ -121,6 +120,7 @@ export const sessionsRouter = {
       const cached = await loadCache(context.db, userId);
       const history = await loadHistory(context.db, userId);
       const today = currentLogicalDay(history, cached, context.now());
+      const skipped = new Set(skippedDatesOf(history));
       const goalIds = [...new Set(input.ops.map((op) => op.goalId))];
       const sorted = input.ops.toSorted(
         (a, b) =>
@@ -165,12 +165,12 @@ export const sessionsRouter = {
             continue;
           }
 
-          if (!isDayEditable(goalRow, op.logicalDate, today)) {
+          if (!isDayEditable(goalRow, op.logicalDate, today) || skipped.has(op.logicalDate)) {
             rejected.push({ opId: op.opId, reason: "read_only" });
             continue;
           }
 
-          // eslint-disable-next-line no-await-in-loop -- the batch stays ordered inside one transaction
+          // oxlint-disable-next-line no-await-in-loop -- the batch stays ordered inside one transaction
           const currentRow = await findLatest(tx, op.goalId, op.logicalDate);
           const resolution = resolveSessionOp(
             currentRow ? toRecord(currentRow) : null,
@@ -210,7 +210,7 @@ export const sessionsRouter = {
                   createdAt: new Date(now),
                 });
 
-            // eslint-disable-next-line no-await-in-loop -- writes stay ordered inside one transaction
+            // oxlint-disable-next-line no-await-in-loop -- writes stay ordered inside one transaction
             await write;
 
             applied.push(op.opId);

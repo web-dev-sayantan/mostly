@@ -17,7 +17,7 @@ export interface SettingValues {
 export interface SettingVersion extends SettingValues {
   effectiveFrom: string;
   /** Logical dates the timezone jump at this version never produced. */
-  skippedDates?: readonly string[];
+  skippedDates?: readonly string[] | null;
 }
 
 export interface PlannedSettingVersion extends SettingValues {

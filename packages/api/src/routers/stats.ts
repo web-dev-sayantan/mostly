@@ -169,6 +169,7 @@ export const statsRouter = {
         })),
         settings: clock.history,
         today: clock.today,
+        skippedDates: clock.skippedDates,
       });
 
       const heatmap: GoalHeatmapDto =

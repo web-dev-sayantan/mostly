@@ -7,12 +7,7 @@ import {
   reminderDelivery,
 } from "@mostly/db/schema/reminders";
 import { session } from "@mostly/db/schema/sessions";
-import type {
-  Cadence,
-  ReminderGoal,
-  ReminderSettings,
-  Weekday,
-} from "@mostly/domain";
+import type { ReminderGoal, ReminderSettings } from "@mostly/domain";
 import {
   countOpenItems,
   isReminderDue,
@@ -23,6 +18,7 @@ import {
 } from "@mostly/domain";
 import { and, asc, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 
+import { cadenceFromScheduleRow } from "./cadence";
 import type { PushSender, PushSubscriptionRecord } from "./push";
 import { PushSendError } from "./push";
 import { loadHistory, resolveCurrent } from "./routers/settings";
@@ -31,15 +27,7 @@ type GoalRow = typeof goal.$inferSelect;
 type ScheduleRow = typeof goalScheduleVersion.$inferSelect;
 type SubscriptionRow = typeof pushSubscription.$inferSelect;
 
-const toCadence = (row: ScheduleRow): Cadence => {
-  if (row.cadenceType === "weekdays") {
-    return { type: "weekdays", weekdays: (row.weekdays ?? []) as Weekday[] };
-  }
-  if (row.cadenceType === "weekly_target") {
-    return { type: "weekly_target", target: row.weeklyTarget ?? 1 };
-  }
-  return { type: "daily" };
-};
+const toCadence = cadenceFromScheduleRow;
 
 const settingsOf = (row: typeof user.$inferSelect): ReminderSettings => ({
   enabled: row.reminderEnabled,

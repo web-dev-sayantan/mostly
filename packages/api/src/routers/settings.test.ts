@@ -126,6 +126,40 @@ describe("settings router", () => {
     );
   });
 
+  it("records the date a dateline jump skips and returns no expectations for it", async () => {
+    const client = clientFor(db, alice);
+    await client.settings.get({ timeZone: "Pacific/Pago_Pago" });
+
+    const result = await client.settings.update({
+      timeZone: "Pacific/Kiritimati",
+      confirmTimeZone: true,
+    });
+    const skipped = result.history.find(
+      (version) => version.effectiveFrom === "2026-10-21"
+    );
+
+    expect(skipped?.skippedDates).toEqual(["2026-10-21"]);
+
+    await client.goals.create({
+      name: "Reading",
+      emoji: null,
+      color: null,
+      priority: "medium",
+      cadence: { type: "daily" },
+      startDate: "2026-10-20",
+    });
+    const day = await client.days.get({ date: "2026-10-21" });
+
+    expect(day).toMatchObject({
+      skipped: true,
+      readOnly: true,
+      expectations: [],
+      extras: [],
+      weekly: [],
+      candidates: [],
+    });
+  });
+
   it("applies a week-start change next week and flags the streak reset", async () => {
     const client = clientFor(db, alice);
     await client.settings.get({ timeZone: "UTC" });

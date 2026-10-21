@@ -10,6 +10,7 @@ export interface SyncStatus {
   pendingCount: number;
   conflicts: SessionConflict[];
   authExpired: boolean;
+  accountDeleted: boolean;
   retry: () => void;
 }
 
@@ -26,6 +27,10 @@ export interface SyncEngineOptions {
   isOnline?: () => boolean;
   schedule?: (callback: () => void, delayMs: number) => SyncTimer;
   cancel?: (timer: SyncTimer) => void;
+  /** True when the server has a tombstone for the bound account. */
+  checkAccountDeleted?: () => Promise<boolean>;
+  /** Clear app-level caches after the store has been wiped. */
+  onAccountDeleted?: () => void;
 }
 
 export interface SyncEngine {
@@ -71,6 +76,8 @@ export const createSyncEngine = ({
   isOnline = () => true,
   schedule = (callback, delayMs) => setTimeout(callback, delayMs),
   cancel = (timer) => clearTimeout(timer),
+  checkAccountDeleted,
+  onAccountDeleted,
 }: SyncEngineOptions): SyncEngine => {
   const listeners = new Set<() => void>();
   let inFlight: Promise<void> | null = null;
@@ -78,6 +85,7 @@ export const createSyncEngine = ({
   let attempt = 0;
   let lastError = false;
   let authExpired = false;
+  let accountDeleted = false;
   let syncing = false;
   let syncNow: () => Promise<void> = noopSync;
 
@@ -126,6 +134,7 @@ export const createSyncEngine = ({
       store.applySyncResult(result, now());
       lastError = false;
       authExpired = false;
+      accountDeleted = false;
       attempt = 0;
       syncing = false;
       notify();
@@ -138,6 +147,26 @@ export const createSyncEngine = ({
         }, 0);
       }
     } catch (error) {
+      if (isUnauthorized(error)) {
+        const deleted = checkAccountDeleted
+          ? await checkAccountDeleted().catch(() => false)
+          : false;
+        if (deleted) {
+          // The account is gone: the queue can never replay, so discard it and
+          // every local cache instead of prompting for a session that expired.
+          store.clear();
+          onAccountDeleted?.();
+          accountDeleted = true;
+          authExpired = false;
+          lastError = false;
+          attempt = 0;
+          syncing = false;
+          clearRetry();
+          notify();
+          return;
+        }
+      }
+
       lastError = true;
       authExpired = isUnauthorized(error);
       syncing = false;
@@ -188,6 +217,7 @@ export const createSyncEngine = ({
         pendingCount: queue.length,
         conflicts,
         authExpired,
+        accountDeleted,
         retry,
       };
     },

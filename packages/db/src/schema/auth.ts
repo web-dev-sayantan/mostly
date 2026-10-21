@@ -80,6 +80,11 @@ export const account = sqliteTable(
   (table) => [index("account_userId_idx").on(table.userId)]
 );
 
+export const accountDeletion = sqliteTable("account_deletion", {
+  userId: text("user_id").primaryKey(),
+  deletedAt: integer("deleted_at", { mode: "timestamp_ms" }).notNull(),
+});
+
 export const verification = sqliteTable(
   "verification",
   {

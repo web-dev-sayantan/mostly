@@ -346,6 +346,7 @@ describe("offline store", () => {
       id: () => "local-2",
     });
     expect(second.bindUser("alice")).toBe(false);
+    expect(second.getUserId()).toBe("alice");
     expect(second.getQueue()).toHaveLength(1);
     expect(second.getSessions()).toHaveLength(1);
 

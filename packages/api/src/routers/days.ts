@@ -7,21 +7,23 @@ import type {
   DaySession,
   Mood,
   ScheduleVersion,
-  Weekday,
   WeeklyOutcome,
 } from "@mostly/domain";
 import {
+  comparePriority,
   isDayEditable,
   isIsoDate,
   resolveDay,
   resolveSchedule,
   settingsForDate,
+  skippedDatesOf,
   weekEndOf,
   weekStartOf,
 } from "@mostly/domain";
 import { and, asc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
 
+import { cadenceFromScheduleRow } from "../cadence";
 import { protectedProcedure } from "../procedures";
 import { currentLogicalDay, loadCache, loadHistory } from "./settings";
 
@@ -29,8 +31,6 @@ type GoalRow = typeof goal.$inferSelect;
 type ScheduleRow = typeof goalScheduleVersion.$inferSelect;
 type SessionRow = typeof session.$inferSelect;
 type Priority = GoalRow["priority"];
-
-const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 const dateSchema = z
   .string()
@@ -88,6 +88,7 @@ export interface DayDetailDto {
   date: string;
   today: string;
   readOnly: boolean;
+  skipped: boolean;
   weekStartsOn: number;
   timeZone: string;
   dayRolloverHour: number;
@@ -99,15 +100,7 @@ export interface DayDetailDto {
   weekSessions: DaySessionDto[];
 }
 
-const toCadence = (row: ScheduleRow): Cadence => {
-  if (row.cadenceType === "weekdays") {
-    return { type: "weekdays", weekdays: (row.weekdays ?? []) as Weekday[] };
-  }
-  if (row.cadenceType === "weekly_target") {
-    return { type: "weekly_target", target: row.weeklyTarget ?? 1 };
-  }
-  return { type: "daily" };
-};
+const toCadence = cadenceFromScheduleRow;
 
 const toScheduleVersion = (row: ScheduleRow): ScheduleVersion => ({
   effectiveFrom: row.effectiveFrom,
@@ -136,13 +129,13 @@ const toSessionDto = (row: SessionRow): DaySessionDto => ({
   logicalDate: row.logicalDate,
   minutes: row.minutes,
   note: row.note,
-  mood: row.mood as Mood | null,
+  mood: row.mood,
   updatedAt: row.updatedAt.getTime(),
   deletedAt: null,
 });
 
 const byPriority = <Entry extends { goal: DayGoalDto }>(a: Entry, b: Entry) =>
-  PRIORITY_RANK[a.goal.priority] - PRIORITY_RANK[b.goal.priority] ||
+  comparePriority(a.goal.priority, b.goal.priority) ||
   a.goal.name.localeCompare(b.goal.name);
 
 const loadVersions = async (db: Database, goalIds: string[]) => {
@@ -228,6 +221,7 @@ export const daysRouter = {
         weekStartsOn: settings.weekStartsOn,
         goals: resolvableGoals,
         sessions: domainSessions,
+        skippedDates: skippedDatesOf(history),
       });
 
       const goalDto = (id: string): DayGoalDto => {
@@ -281,7 +275,7 @@ export const daysRouter = {
         .map((entry) => goalDto(entry.id))
         .toSorted(
           (a, b) =>
-            PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+            comparePriority(a.priority, b.priority) ||
             a.name.localeCompare(b.name)
         );
 
@@ -289,6 +283,7 @@ export const daysRouter = {
         date: input.date,
         today,
         readOnly: resolution.readOnly,
+        skipped: resolution.skipped,
         weekStartsOn: settings.weekStartsOn,
         timeZone: settings.timeZone,
         dayRolloverHour: settings.dayRolloverHour,

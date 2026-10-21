@@ -65,6 +65,31 @@ const signIn = async () => {
 };
 
 const SyncNotice = ({ status }: { status: SyncStatus }) => {
+  if (status.accountDeleted) {
+    return (
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-3 rounded-lg border p-3"
+      >
+        <div>
+          <p className="text-sm font-medium">This account was deleted</p>
+          <p className="text-muted-foreground text-sm">
+            Queued changes and saved data on this device were removed. Sign in
+            with another account to keep using Mostly.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 w-fit px-4 text-sm"
+          onClick={signIn}
+        >
+          Sign in
+        </Button>
+      </div>
+    );
+  }
+
   if (status.authExpired) {
     return (
       <div
