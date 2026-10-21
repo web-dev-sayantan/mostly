@@ -89,7 +89,7 @@ const toDomainCadence = (cadence: z.infer<typeof cadenceSchema>): Cadence => {
   return { type: "daily" };
 };
 
-const toCadence = (row: ScheduleRow): Cadence => {
+export const toCadence = (row: ScheduleRow): Cadence => {
   if (row.cadenceType === "weekdays") {
     return { type: "weekdays", weekdays: (row.weekdays ?? []) as Weekday[] };
   }
@@ -134,7 +134,10 @@ const loadVersions = (db: Database, goalId: string) =>
     .where(eq(goalScheduleVersion.goalId, goalId))
     .orderBy(asc(goalScheduleVersion.effectiveFrom));
 
-const loadDto = async (db: Database, row: GoalRow): Promise<GoalDto> =>
+export const loadGoalDto = async (
+  db: Database,
+  row: GoalRow
+): Promise<GoalDto> =>
   toDto(
     row,
     await loadVersions(db, row.id),
@@ -214,7 +217,7 @@ export const goalsRouter = {
         throw new ORPCError("NOT_FOUND");
       }
 
-      return loadDto(context.db, row);
+      return loadGoalDto(context.db, row);
     }),
 
   create: protectedProcedure
@@ -269,7 +272,7 @@ export const goalsRouter = {
         context.session.user.id,
         id
       );
-      return loadDto(context.db, row);
+      return loadGoalDto(context.db, row);
     }),
 
   update: protectedProcedure
@@ -386,7 +389,7 @@ export const goalsRouter = {
         context.session.user.id,
         current.id
       );
-      return loadDto(context.db, row);
+      return loadGoalDto(context.db, row);
     }),
 
   archive: protectedProcedure
@@ -399,7 +402,7 @@ export const goalsRouter = {
       );
 
       if (current.archivedOn) {
-        return loadDto(context.db, current);
+        return loadGoalDto(context.db, current);
       }
 
       const now = new Date();
@@ -415,7 +418,7 @@ export const goalsRouter = {
         context.session.user.id,
         current.id
       );
-      return loadDto(context.db, row);
+      return loadGoalDto(context.db, row);
     }),
 
   delete: protectedProcedure

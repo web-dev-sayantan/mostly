@@ -4,6 +4,7 @@ import { protectedProcedure, publicProcedure } from "../procedures";
 import { goalsRouter } from "./goals";
 import { sessionsRouter } from "./sessions";
 import { settingsRouter } from "./settings";
+import { statsRouter } from "./stats";
 
 export const appRouter = {
   healthCheck: publicProcedure.handler(() => "OK"),
@@ -14,6 +15,7 @@ export const appRouter = {
   goals: goalsRouter,
   settings: settingsRouter,
   sessions: sessionsRouter,
+  stats: statsRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;
