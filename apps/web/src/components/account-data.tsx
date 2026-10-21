@@ -150,17 +150,22 @@ const SignOutControl = () => {
   const signOut = async () => {
     setWorking(true);
 
-    if (!discardWarning) {
-      const pending = await prepareSignOut();
-      if (pending > 0) {
-        setDiscardWarning(true);
-        setWorking(false);
-        return;
+    try {
+      if (!discardWarning) {
+        const pending = await prepareSignOut();
+        if (pending > 0) {
+          setDiscardWarning(true);
+          setWorking(false);
+          return;
+        }
       }
-    }
 
-    const signedOut = await finishSignOut();
-    if (!signedOut) {
+      const signedOut = await finishSignOut();
+      if (!signedOut) {
+        setWorking(false);
+        toast.error("Couldn't sign out. Check your connection and try again.");
+      }
+    } catch {
       setWorking(false);
       toast.error("Couldn't sign out. Check your connection and try again.");
     }
