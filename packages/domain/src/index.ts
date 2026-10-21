@@ -1,4 +1,12 @@
 export type { TimeSettings } from "./logical-day";
+export type {
+  DailyOutcome,
+  DerivedOutcomes,
+  ExportGoalInput,
+  ExportSessionInput,
+  WeeklyOutcome,
+} from "./export";
+export { deriveOutcomes, EXPORT_SCHEMA_VERSION } from "./export";
 export {
   addLogicalDays,
   isBeforeRollover,
