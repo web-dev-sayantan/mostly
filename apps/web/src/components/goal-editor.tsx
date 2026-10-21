@@ -439,10 +439,12 @@ export const GoalEditor = ({
   goal,
   onClose,
   onDone,
+  onDeleted,
 }: {
   goal: GoalDto | null;
   onClose: () => void;
   onDone: () => void;
+  onDeleted?: () => void;
 }) => {
   const [form, setForm] = useState<FormState>(() => initialForm(goal));
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
@@ -495,6 +497,10 @@ export const GoalEditor = ({
     orpc.goals.delete.mutationOptions({
       onSuccess: () => {
         invalidate();
+        if (onDeleted) {
+          onDeleted();
+          return;
+        }
         onDone();
       },
     })

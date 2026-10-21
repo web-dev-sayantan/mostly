@@ -4,7 +4,7 @@ import { cn } from "@mostly/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { GoalEditor } from "@/components/goal-editor";
 import {
@@ -15,6 +15,7 @@ import {
   localToday,
   timingNote,
 } from "@/lib/goals";
+import { useOnline } from "@/lib/online";
 import { orpc } from "@/utils/orpc";
 
 type Filter = "active" | "archived";
@@ -24,24 +25,6 @@ const PRIORITY_RANK: Record<GoalDto["priority"], number> = {
   high: 0,
   medium: 1,
   low: 2,
-};
-
-const useOnline = () => {
-  const [online, setOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine
-  );
-
-  useEffect(() => {
-    const update = () => setOnline(navigator.onLine);
-    window.addEventListener("online", update);
-    window.addEventListener("offline", update);
-    return () => {
-      window.removeEventListener("online", update);
-      window.removeEventListener("offline", update);
-    };
-  }, []);
-
-  return online;
 };
 
 const GoalRow = ({

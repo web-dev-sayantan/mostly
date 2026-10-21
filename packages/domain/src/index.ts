@@ -52,6 +52,23 @@ export type {
 } from "./settings";
 export { planSettingChange, settingsForDate } from "./settings";
 export type {
+  GoalConsistency,
+  GoalDay,
+  GoalDayStatus,
+  GoalMinutes,
+  GoalStats,
+  GoalStatsInput,
+  GoalWeek,
+  GoalWeekStatus,
+  OverallConsistency,
+  StatsGoal,
+  StatsSession,
+  StatsSettingsVersion,
+  StreakEra,
+  StreakUnit,
+} from "./stats";
+export { goalStats, overallConsistency } from "./stats";
+export type {
   Mood,
   SessionConflict,
   SessionGoal,
