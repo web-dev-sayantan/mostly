@@ -85,15 +85,18 @@ export const skippedDatesOf = (
  * the dates in between have no expectation and no data.
  */
 export const skippedDatesForTimeZoneChange = ({
+  today,
   now,
   current,
   next,
 }: {
+  /** The resolved logical today from the settings handler, not recomputed. */
+  today: string;
+  /** Anchors the next boundary under the old settings. */
   now: Date;
   current: TimeSettings;
   next: TimeSettings;
 }): string[] => {
-  const today = logicalDate(now, current);
   const boundary = nextLogicalBoundary(now, current);
   const firstNewDate = logicalDate(boundary, next);
   const dates: string[] = [];
@@ -110,14 +113,14 @@ export const skippedDatesForTimeZoneChange = ({
 };
 
 /**
- * Today and the version in effect, keeping the earliest hint on a backward
- * correction. A rollover change must not reopen the day that already closed
- * under the old rule (ADR 0005).
+ * Today and the version in effect. The day the latest version starts opens
+ * under the previous rule; later days follow the latest rule. The cache hint is
+ * never needed for correctness, so a stale rollover cannot reopen or skip a day.
  */
 export const resolveSettingsForNow = <Version extends SettingVersion>(
   versions: readonly Version[],
   now: Date,
-  hint?: TimeSettings | null
+  _hint?: TimeSettings | null
 ): { today: string; current: Version } | null => {
   if (versions.length === 0) {
     return null;
@@ -127,20 +130,33 @@ export const resolveSettingsForNow = <Version extends SettingVersion>(
     left.effectiveFrom.localeCompare(right.effectiveFrom)
   );
   const latest = sorted.at(-1) as Version;
-  const initial: TimeSettings = hint ?? {
+  const previous = sorted.at(-2) ?? latest;
+  const oldToday = logicalDate(now, {
+    timeZone: previous.timeZone,
+    rolloverHour: previous.dayRolloverHour,
+  });
+  const newToday = logicalDate(now, {
     timeZone: latest.timeZone,
     rolloverHour: latest.dayRolloverHour,
-  };
-  const preliminary = logicalDate(now, initial);
-  let current = settingsForDate(sorted, preliminary) ?? latest;
-  const corrected = logicalDate(now, {
-    timeZone: current.timeZone,
-    rolloverHour: current.dayRolloverHour,
   });
-  const today = corrected > preliminary ? corrected : preliminary;
-  current = settingsForDate(sorted, today) ?? current;
+  const skipped = new Set(
+    sorted.flatMap((version) => version.skippedDates ?? [])
+  );
+  const { effectiveFrom } = latest;
 
-  return { today, current };
+  let today: string;
+  if (oldToday <= effectiveFrom && !skipped.has(oldToday)) {
+    // Before or on the effective day: the old rule still owns it.
+    today = oldToday;
+  } else {
+    // After it, follow the new rule but never move before the day that opened.
+    today = newToday > effectiveFrom ? newToday : effectiveFrom;
+  }
+
+  return {
+    today,
+    current: settingsForDate(sorted, today) ?? latest,
+  };
 };
 
 /** The first boundary of the given week start strictly after `date`. */

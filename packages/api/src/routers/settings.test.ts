@@ -188,6 +188,78 @@ describe("settings router", () => {
     });
   });
 
+  it("keeps the transition day with a stale 4 AM cache after the next boundary", async () => {
+    const client = clientFor(db, alice);
+    await client.settings.get({ timeZone: "UTC" });
+    await client.settings.update({ dayRolloverHour: 6 });
+
+    const staleCacheClient = createRouterClient(appRouter, {
+      context: createTestContext(
+        db,
+        alice,
+        () => new Date("2026-10-23T05:00:00Z")
+      ),
+    });
+
+    await expect(staleCacheClient.settings.get({})).resolves.toMatchObject({
+      today: "2026-10-22",
+    });
+    await expect(
+      staleCacheClient.days.get({ date: "2026-10-22" })
+    ).resolves.toMatchObject({ today: "2026-10-22", skipped: false });
+  });
+
+  it("keeps skipped dates when a rollover replaces a pending dateline jump", async () => {
+    const client = clientFor(db, alice);
+    await client.settings.get({ timeZone: "Pacific/Pago_Pago" });
+    await client.settings.update({
+      timeZone: "Pacific/Kiritimati",
+      confirmTimeZone: true,
+    });
+
+    const result = await client.settings.update({ dayRolloverHour: 6 });
+    const pending = result.history.filter(
+      (version) => version.effectiveFrom === "2026-10-21"
+    );
+
+    expect(pending).toHaveLength(1);
+    expect(pending[0]).toMatchObject({
+      timeZone: "Pacific/Kiritimati",
+      dayRolloverHour: 6,
+      skippedDates: ["2026-10-21"],
+    });
+    await expect(
+      client.days.get({ date: "2026-10-21" })
+    ).resolves.toMatchObject({ skipped: true });
+  });
+
+  it("does not mark the open transition day skipped on a timezone change", async () => {
+    const client = clientFor(db, alice);
+    await client.settings.get({ timeZone: "UTC" });
+    await client.settings.update({ dayRolloverHour: 6 });
+
+    const transitionClient = createRouterClient(appRouter, {
+      context: createTestContext(
+        db,
+        alice,
+        () => new Date("2026-10-23T05:00:00Z")
+      ),
+    });
+    const result = await transitionClient.settings.update({
+      timeZone: "Pacific/Kiritimati",
+      confirmTimeZone: true,
+    });
+    const pending = result.history.find(
+      (version) => version.effectiveFrom === "2026-10-23"
+    );
+
+    expect(result.today).toBe("2026-10-22");
+    expect(pending?.skippedDates).not.toContain("2026-10-22");
+    await expect(
+      transitionClient.days.get({ date: "2026-10-22" })
+    ).resolves.toMatchObject({ skipped: false });
+  });
+
   it("applies a week-start change next week and flags the streak reset", async () => {
     const client = clientFor(db, alice);
     await client.settings.get({ timeZone: "UTC" });

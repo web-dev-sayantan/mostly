@@ -8,10 +8,11 @@ import {
   resolveSettingsForNow,
   settingsForDate,
   skippedDatesForTimeZoneChange,
+  skippedDatesOf,
 } from "@mostly/domain";
 import type { SettingValues } from "@mostly/domain";
 import { ORPCError } from "@orpc/server";
-import { and, asc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, eq, gt } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure } from "../procedures";
@@ -255,13 +256,23 @@ export const settingsRouter = {
 
       let nextHistory = history;
       if (plan.versions.length > 0) {
-        const effectiveDates = plan.versions.map(
-          (version) => version.effectiveFrom
-        );
         const [first] = plan.versions;
+        const pending = history.filter(
+          (version) => version.effectiveFrom > today
+        );
+        const replaced = new Set(
+          plan.versions.map((version) => version.effectiveFrom)
+        );
+        const superseded = pending.filter((version) =>
+          replaced.has(version.effectiveFrom)
+        );
+        const retained = pending.filter(
+          (version) => !replaced.has(version.effectiveFrom)
+        );
         const skippedDates =
           plan.timeZoneChanged && first
             ? skippedDatesForTimeZoneChange({
+                today,
                 now,
                 current: {
                   timeZone: current.timeZone,
@@ -272,32 +283,46 @@ export const settingsRouter = {
                   rolloverHour: first.dayRolloverHour,
                 },
               })
-            : [];
-        // A pending version on the same boundary is superseded, never a past version.
+            : skippedDatesOf(superseded);
+        // Replace the whole pending plan, never a past version. Versions the new
+        // plan does not touch are re-inserted with their skipped dates intact.
         await context.db
           .delete(userSettingVersion)
           .where(
             and(
               eq(userSettingVersion.userId, userId),
-              gt(userSettingVersion.effectiveFrom, today),
-              inArray(userSettingVersion.effectiveFrom, effectiveDates)
+              gt(userSettingVersion.effectiveFrom, today)
             )
           );
 
         const inserted = await context.db
           .insert(userSettingVersion)
-          .values(
-            plan.versions.map((version, index) => ({
+          .values([
+            ...plan.versions.map((version, index) => ({
               id: crypto.randomUUID(),
               userId,
               ...version,
               skippedDates: index === 0 ? skippedDates : null,
               createdAt: now,
-            }))
-          )
+            })),
+            ...retained.map((version) => ({
+              id: crypto.randomUUID(),
+              userId,
+              effectiveFrom: version.effectiveFrom,
+              timeZone: version.timeZone,
+              weekStartsOn: version.weekStartsOn,
+              dayRolloverHour: version.dayRolloverHour,
+              skippedDates: version.skippedDates,
+              createdAt: now,
+            })),
+          ])
           .returning();
 
-        nextHistory = [...history, ...inserted].toSorted((left, right) =>
+        const pendingIds = new Set(pending.map((version) => version.id));
+        nextHistory = [
+          ...history.filter((version) => !pendingIds.has(version.id)),
+          ...inserted,
+        ].toSorted((left, right) =>
           left.effectiveFrom.localeCompare(right.effectiveFrom)
         );
       }
