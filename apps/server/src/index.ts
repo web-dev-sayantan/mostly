@@ -125,4 +125,7 @@ export const scheduled = (
   ctx.waitUntil(runScheduledReminders(controller.scheduledTime));
 };
 
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled,
+};
