@@ -2,7 +2,7 @@ import type { GoalDto } from "@mostly/api/routers/goals";
 import { weekStartOf } from "@mostly/domain";
 import { Button } from "@mostly/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { PendingUndo } from "@/components/today-screen";
@@ -21,7 +21,7 @@ import {
   writeGoalsCache,
   writeSettingsCache,
 } from "@/lib/today-cache";
-import { orpc } from "@/utils/orpc";
+import { client, orpc } from "@/utils/orpc";
 
 const UNDO_MS = 5000;
 
@@ -258,5 +258,11 @@ const TodayPage = () => {
 };
 
 export const Route = createFileRoute("/_auth/today")({
+  beforeLoad: async () => {
+    const status = await client.onboarding.status().catch(() => null);
+    if (status && !status.completed) {
+      throw redirect({ to: "/onboarding" });
+    }
+  },
   component: TodayPage,
 });

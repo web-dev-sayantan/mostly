@@ -18,10 +18,12 @@
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "drizzle-orm": "catalog:",
+    "web-push": "^3.6.7",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@mostly/config": "workspace:*",
+    "@types/web-push": "^3.6.4",
     "typescript": "catalog:"
   }
 }

@@ -1,3 +1,5 @@
+import { createPushSender, pushConfigFromEnv } from "@mostly/api/push";
+import { runReminders } from "@mostly/api/reminder-service";
 import { appRouter } from "@mostly/api/routers/index";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
@@ -10,7 +12,7 @@ import { logger } from "hono/logger";
 
 import { createContext } from "./context";
 import { ENV } from "./env.server";
-import { createAuth } from "./services";
+import { createAuth, getDb } from "./services";
 
 const app = new Hono();
 
@@ -22,10 +24,37 @@ app.use(
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  }),
+  })
 );
 
-app.on(["POST", "GET"], "/api/auth/*", async (c) => (await createAuth()).handler(c.req.raw));
+app.on(["POST", "GET"], "/api/auth/*", async (c) => {
+  const auth = await createAuth();
+  return auth.handler(c.req.raw);
+});
+
+const pushSender = () => {
+  const config = pushConfigFromEnv(ENV);
+  return config ? createPushSender(config) : null;
+};
+
+// Cron triggers run every five minutes; this endpoint is for an external
+// scheduler and for manual checks. Both share the same idempotent delivery log.
+app.post("/api/reminders/run", async (c) => {
+  const secret = ENV.REMINDER_RUN_SECRET;
+  if (!secret) {
+    return c.json({ error: "Reminder runs are not configured." }, 503);
+  }
+  if (c.req.header("authorization") !== `Bearer ${secret}`) {
+    return c.text("Unauthorized", 401);
+  }
+
+  const summary = await runReminders({
+    db: getDb(),
+    now: new Date(),
+    sender: pushSender(),
+  });
+  return c.json(summary);
+});
 
 export const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [
@@ -34,6 +63,7 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
     }),
   ],
   interceptors: [
+    // oxlint-disable-next-line promise/prefer-await-to-callbacks -- oRPC's onError takes a callback.
     onError((error) => {
       console.error(error);
     }),
@@ -42,6 +72,7 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 
 export const rpcHandler = new RPCHandler(appRouter, {
   interceptors: [
+    // oxlint-disable-next-line promise/prefer-await-to-callbacks -- oRPC's onError takes a callback.
     onError((error) => {
       console.error(error);
     }),
@@ -53,7 +84,7 @@ app.use("/*", async (c, next) => {
 
   const rpcResult = await rpcHandler.handle(c.req.raw, {
     prefix: "/rpc",
-    context: context,
+    context,
   });
 
   if (rpcResult.matched) {
@@ -62,18 +93,36 @@ app.use("/*", async (c, next) => {
 
   const apiResult = await apiHandler.handle(c.req.raw, {
     prefix: "/api-reference",
-    context: context,
+    context,
   });
 
   if (apiResult.matched) {
     return c.newResponse(apiResult.response.body, apiResult.response);
   }
 
-  await next();
+  return next();
 });
 
-app.get("/", (c) => {
-  return c.text("OK");
-});
+app.get("/", (c) => c.text("OK"));
+
+const runScheduledReminders = async (scheduledTime: number): Promise<void> => {
+  try {
+    await runReminders({
+      db: getDb(),
+      now: new Date(scheduledTime),
+      sender: pushSender(),
+    });
+  } catch (error) {
+    console.error("Reminder run failed", error);
+  }
+};
+
+export const scheduled = (
+  controller: ScheduledController,
+  _env: Env,
+  ctx: ExecutionContext
+) => {
+  ctx.waitUntil(runScheduledReminders(controller.scheduledTime));
+};
 
 export default app;

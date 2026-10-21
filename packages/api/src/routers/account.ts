@@ -5,6 +5,10 @@ import {
   user,
 } from "@mostly/db/schema/auth";
 import { goal, goalScheduleVersion } from "@mostly/db/schema/goals";
+import {
+  pushSubscription,
+  reminderDelivery,
+} from "@mostly/db/schema/reminders";
 import { session } from "@mostly/db/schema/sessions";
 import { userSettingVersion } from "@mostly/db/schema/settings";
 import type { Cadence, SettingVersion, Weekday } from "@mostly/domain";
@@ -233,8 +237,15 @@ export const accountRouter = {
       const userId = context.session.user.id;
 
       await context.db.transaction(async (tx) => {
-        // Ticket 12 adds push_subscription with a cascade from user, so this
-        // deletion revokes every device subscription and delivery here.
+        // Reminder rows are user-scoped; deleting them revokes every device
+        // subscription before the user row cascades.
+        await tx
+          .delete(reminderDelivery)
+          .where(eq(reminderDelivery.userId, userId));
+        await tx
+          .delete(pushSubscription)
+          .where(eq(pushSubscription.userId, userId));
+
         await tx.delete(session).where(eq(session.userId, userId));
 
         const goalIds = await tx

@@ -17,6 +17,24 @@ export {
   weekdayOf,
 } from "./logical-day";
 export type {
+  ReminderDue,
+  ReminderGoal,
+  ReminderOpenItems,
+  ReminderPlan,
+  ReminderSession,
+  ReminderSettings,
+  ReminderSkipReason,
+  ReminderSuppressionReason,
+} from "./reminder";
+export {
+  countOpenItems,
+  DEFAULT_REMINDER_TIME,
+  isReminderDue,
+  reminderCopy,
+  reminderPayload,
+  reminderPlan,
+} from "./reminder";
+export type {
   DayExpectation,
   DayExpectationStatus,
   DayExtra,

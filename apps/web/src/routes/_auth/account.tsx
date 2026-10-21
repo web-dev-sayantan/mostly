@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { DataControls } from "@/components/account-data";
+import { ReminderSettings } from "@/components/account-reminder";
 import { AccountSection } from "@/components/account-section";
 import { useTheme } from "@/components/theme-provider";
 import { APP_VERSION, SOURCE_URL } from "@/lib/app-info";
@@ -68,16 +69,6 @@ const Profile = () => {
     </AccountSection>
   );
 };
-
-const Reminder = () => (
-  <AccountSection id="reminder" title="Reminder">
-    <p className="text-sm">One reminder a day. No streak guilt, no spam.</p>
-    <p className="text-muted-foreground text-sm">
-      Reminder controls arrive with notifications. The default is 9:30 PM local
-      time.
-    </p>
-  </AccountSection>
-);
 
 const Install = () => (
   <AccountSection id="install" title="Install">
@@ -149,7 +140,7 @@ const AccountPage = () => (
     <h1 className="text-[28px] leading-tight font-medium">Account</h1>
     <div className="mt-6 grid gap-6">
       <Profile />
-      <Reminder />
+      <ReminderSettings />
       <Preferences />
       <DataControls />
       <Install />

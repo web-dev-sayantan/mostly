@@ -4,7 +4,9 @@ import { protectedProcedure, publicProcedure } from "../procedures";
 import { accountRouter } from "./account";
 import { daysRouter } from "./days";
 import { goalsRouter } from "./goals";
+import { onboardingRouter } from "./onboarding";
 import { progressRouter } from "./progress";
+import { remindersRouter } from "./reminders";
 import { sessionsRouter } from "./sessions";
 import { settingsRouter } from "./settings";
 import { statsRouter } from "./stats";
@@ -18,7 +20,9 @@ export const appRouter = {
   account: accountRouter,
   days: daysRouter,
   goals: goalsRouter,
+  onboarding: onboardingRouter,
   progress: progressRouter,
+  reminders: remindersRouter,
   settings: settingsRouter,
   sessions: sessionsRouter,
   stats: statsRouter,
