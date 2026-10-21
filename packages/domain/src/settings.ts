@@ -33,13 +33,16 @@ export interface SettingChangePlan {
  */
 export const settingsForDate = <Version extends SettingVersion>(
   versions: readonly Version[],
-  date: string,
+  date: string
 ): Version | undefined => {
   let effective: Version | undefined;
   let earliest: Version | undefined;
 
   for (const version of versions) {
-    if (version.effectiveFrom <= date && (!effective || version.effectiveFrom >= effective.effectiveFrom)) {
+    if (
+      version.effectiveFrom <= date &&
+      (!effective || version.effectiveFrom >= effective.effectiveFrom)
+    ) {
       effective = version;
     }
     if (!earliest || version.effectiveFrom < earliest.effectiveFrom) {
@@ -61,7 +64,7 @@ const nextWeekStart = (date: string, weekStartsOn: number): string =>
 export const planSettingChange = (
   current: SettingVersion,
   today: string,
-  changes: Partial<SettingValues>,
+  changes: Partial<SettingValues>
 ): SettingChangePlan => {
   const next: SettingValues = {
     timeZone: changes.timeZone ?? current.timeZone,
@@ -97,18 +100,21 @@ export const planSettingChange = (
 
   const dailyChange = timeZoneChanged || dayRolloverChanged;
 
-  let versions: PlannedSettingVersion[];
-  if (weeklyChange && dailyChange && weeklyChange.effectiveFrom !== nextDay) {
-    versions = [
-      { ...current, timeZone: next.timeZone, dayRolloverHour: next.dayRolloverHour, effectiveFrom: nextDay },
-      {
-        ...next,
-        effectiveFrom: weeklyChange.effectiveFrom,
-      },
-    ];
-  } else {
-    versions = [{ ...next, effectiveFrom: weeklyChange?.effectiveFrom ?? nextDay }];
-  }
+  const versions =
+    weeklyChange && dailyChange && weeklyChange.effectiveFrom !== nextDay
+      ? [
+          {
+            ...current,
+            timeZone: next.timeZone,
+            dayRolloverHour: next.dayRolloverHour,
+            effectiveFrom: nextDay,
+          },
+          {
+            ...next,
+            effectiveFrom: weeklyChange.effectiveFrom,
+          },
+        ]
+      : [{ ...next, effectiveFrom: weeklyChange?.effectiveFrom ?? nextDay }];
 
   return {
     versions,

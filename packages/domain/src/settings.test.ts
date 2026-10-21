@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { planSettingChange, settingsForDate, type SettingVersion } from "./settings";
+import { planSettingChange, settingsForDate } from "./settings";
+import type { SettingVersion } from "./settings";
 
 const versions: SettingVersion[] = [
   {
@@ -102,7 +103,8 @@ describe("planSettingChange", () => {
     const mondayStart = { ...current, weekStartsOn: 1 };
 
     expect(
-      planSettingChange(mondayStart, "2026-10-25", { weekStartsOn: 7 }).versions[0]?.effectiveFrom,
+      planSettingChange(mondayStart, "2026-10-25", { weekStartsOn: 7 })
+        .versions[0]?.effectiveFrom
     ).toBe("2026-11-01");
   });
 
@@ -136,7 +138,7 @@ describe("planSettingChange", () => {
       planSettingChange(sundayStart, "2026-10-25", {
         weekStartsOn: 1,
         dayRolloverHour: 2,
-      }).versions,
+      }).versions
     ).toEqual([
       {
         effectiveFrom: "2026-10-26",
