@@ -1,6 +1,7 @@
 import type { GoalDto } from "@mostly/api/routers/goals";
 import type { GoalRecentDayDto } from "@mostly/api/routers/stats";
-import { addLogicalDays, isWithinLastLogicalDays } from "@mostly/domain";
+import { MOODS, addLogicalDays, isWithinLastLogicalDays } from "@mostly/domain";
+import type { Mood } from "@mostly/domain";
 import { Button } from "@mostly/ui/components/button";
 import { Input } from "@mostly/ui/components/input";
 import { Label } from "@mostly/ui/components/label";
@@ -20,15 +21,11 @@ import {
 } from "@/lib/offline";
 import { formatLogicalDate } from "@/lib/time";
 
-type Mood = NonNullable<GoalRecentDayDto["mood"]>;
-
 const MOOD_LABELS: Record<Mood, string> = {
   great: "Great",
   meh: "Meh",
   rough: "Rough",
 };
-
-const MOODS: Mood[] = ["great", "meh", "rough"];
 
 const detailSummary = (row: GoalRecentDayDto): string[] => {
   const parts: string[] = [];

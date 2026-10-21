@@ -86,7 +86,7 @@ const toDomainCadence = (cadence: z.infer<typeof cadenceSchema>): Cadence => {
   return { type: "daily" };
 };
 
-export const toCadence = (row: ScheduleRow): Cadence => {
+const toCadence = (row: ScheduleRow): Cadence => {
   if (row.cadenceType === "weekdays") {
     return { type: "weekdays", weekdays: (row.weekdays ?? []) as Weekday[] };
   }
