@@ -254,6 +254,7 @@ const dailyRangeCounts = ({
   return { done, expected };
 };
 
+// shortcut: progress weeks use the current week-start setting; historical changes are not replayed here.
 const weeklyRangeCounts = ({
   goal,
   dates,
