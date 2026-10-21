@@ -44,7 +44,7 @@ const weekLabel = (status: ProgressWeekStatus): string => {
     return "Some sessions";
   }
   if (status === "not_scored") {
-    return "Not scored";
+    return "Not enough days this week";
   }
   return "No session";
 };

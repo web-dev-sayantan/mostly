@@ -164,6 +164,12 @@ export const ProgressHeatmap = ({
         </Button>
       </div>
 
+      {asTable ? null : (
+        <p className="sr-only">
+          The heatmap is visual only. Use View as table to read the daily
+          record.
+        </p>
+      )}
       <div id="progress-heatmap-table">
         {asTable ? (
           <DayTable days={heatmap.days} today={today} />
