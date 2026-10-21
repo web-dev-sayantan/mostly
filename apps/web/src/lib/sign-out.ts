@@ -13,6 +13,9 @@ export const prepareSignOut = async (): Promise<number> => {
  * cache so unsynced work is not destroyed by a network error.
  */
 export const finishSignOut = async (): Promise<boolean> => {
+  // Revoke the server-side subscription while the session still exists.
+  await removePushSubscription();
+
   try {
     await authClient.signOut();
   } catch {
@@ -20,7 +23,6 @@ export const finishSignOut = async (): Promise<boolean> => {
   }
 
   clearOfflineData();
-  await removePushSubscription();
   window.location.assign("/login");
   return true;
 };

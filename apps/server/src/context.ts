@@ -1,6 +1,8 @@
 import type { Context as ApiContext } from "@mostly/api/context";
+import { pushConfigFromEnv } from "@mostly/api/push";
 import type { Context as HonoContext } from "hono";
 
+import { ENV } from "./env.server";
 import { createAuth, getDb } from "./services";
 
 export interface CreateContextOptions {
@@ -19,6 +21,7 @@ export const createContext = async ({
     db,
     session,
     now: () => new Date(),
+    push: pushConfigFromEnv(ENV),
   };
 };
 

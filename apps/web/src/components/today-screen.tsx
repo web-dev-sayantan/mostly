@@ -10,9 +10,11 @@ import { dailyProgressPercent, todayProgressCopy } from "@/lib/today";
 
 import { NotScheduledToday } from "./not-scheduled-today";
 import { PastSevenDays } from "./past-seven-days";
+import { PushPermissionNudge } from "./push-permission-nudge";
 import { SessionDetails } from "./session-details";
 import { TodayGoalRow, WeeklyGoalRow } from "./today-goal-row";
 import { TodayHeader } from "./today-header";
+import { TodayReminderFallback } from "./today-reminder-fallback";
 import { TodaySyncFooter } from "./today-sync-footer";
 
 export interface PendingUndo {
@@ -94,6 +96,9 @@ export const TodayScreen = ({
           )}
           showBar={view.dailyTotal > 0}
         />
+
+        <TodayReminderFallback />
+        <PushPermissionNudge />
 
         <p className="sr-only" aria-live="polite" aria-atomic="true">
           {announcement}

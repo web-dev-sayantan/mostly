@@ -13,6 +13,10 @@ export const user = sqliteTable("user", {
   timeZone: text("timezone"),
   weekStartsOn: integer("week_starts_on").notNull().default(1),
   dayRolloverHour: integer("day_rollover_hour").notNull().default(4),
+  reminderEnabled: integer("reminder_enabled", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  reminderTime: text("reminder_time").notNull().default("21:30"),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),

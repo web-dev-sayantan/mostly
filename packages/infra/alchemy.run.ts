@@ -1,14 +1,21 @@
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
+import { Redacted } from "effect";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import "varlock/auto-load";
+
+const optional = (key: string) =>
+  Config.String(key).pipe(Config.withDefault(""));
+const optionalSecret = (key: string) =>
+  Config.Redacted(key).pipe(Config.withDefault(Redacted.make("")));
 
 export const server = Cloudflare.Worker("server", {
   main: "../../apps/server/src/index.ts",
   compatibility: {
     flags: ["nodejs_compat"],
   },
+  crons: ["*/5 * * * *"],
   env: {
     DATABASE_URL: Config.Redacted("DATABASE_URL"),
     CORS_ORIGIN: Config.String("CORS_ORIGIN"),
@@ -19,6 +26,10 @@ export const server = Cloudflare.Worker("server", {
     GOOGLE_CLIENT_ID: Config.String("GOOGLE_CLIENT_ID"),
     GOOGLE_CLIENT_SECRET: Config.Redacted("GOOGLE_CLIENT_SECRET"),
     DATABASE_AUTH_TOKEN: Config.Redacted("DATABASE_AUTH_TOKEN"),
+    VAPID_PUBLIC_KEY: optional("VAPID_PUBLIC_KEY"),
+    VAPID_PRIVATE_KEY: optionalSecret("VAPID_PRIVATE_KEY"),
+    VAPID_SUBJECT: optional("VAPID_SUBJECT"),
+    REMINDER_RUN_SECRET: optionalSecret("REMINDER_RUN_SECRET"),
   },
   dev: {
     port: 3004,
@@ -33,7 +44,7 @@ export default Alchemy.Stack(
     providers: Cloudflare.providers(),
     state: Cloudflare.state(),
   },
-  Effect.gen(function* () {
+  Effect.gen(function* deploy() {
     const serverWorker = yield* server;
     const webWorker = yield* Cloudflare.Website.Vite("web", {
       rootDir: "../../apps/web",
@@ -55,5 +66,5 @@ export default Alchemy.Stack(
       web: webWorker.url,
       server: serverWorker.url,
     };
-  }),
+  })
 );
