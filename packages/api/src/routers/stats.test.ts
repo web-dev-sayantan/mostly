@@ -131,16 +131,16 @@ describe("stats router goal detail", () => {
     const goalId = await createGoal(alice.user.id, {
       startDate: "2026-01-20",
       sessions: [
-        "2026-01-20",
-        "2026-01-21",
-        "2026-01-22",
-        "2026-01-23",
-        "2026-01-24",
-        "2026-01-25",
-        "2026-01-30",
-        "2026-01-31",
-        "2026-02-01",
-      ].map((logicalDate) => ({ logicalDate })),
+        { logicalDate: "2026-01-20", minutes: 30 },
+        { logicalDate: "2026-01-21", minutes: 20 },
+        { logicalDate: "2026-01-22", minutes: 10 },
+        { logicalDate: "2026-01-23" },
+        { logicalDate: "2026-01-24" },
+        { logicalDate: "2026-01-25" },
+        { logicalDate: "2026-01-30" },
+        { logicalDate: "2026-01-31" },
+        { logicalDate: "2026-02-01" },
+      ],
     });
 
     const detail = await aliceClient.stats.goal({ id: goalId });
@@ -162,6 +162,7 @@ describe("stats router goal detail", () => {
       bestStreak: 6,
       sessions: 9,
       consistency: { done: 9, expected: 13, percent: 69, qualified: true },
+      minutes: { total: 60, average: 20, withMinutes: 3, sessions: 9 },
     });
     expect(detail.heatmap?.unit).toBe("day");
     if (detail.heatmap?.unit !== "day") {
