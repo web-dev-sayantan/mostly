@@ -9,8 +9,14 @@
   },
   "include": ["src/**/*.ts"],
   "references": [
-    { "path": "../db" },
-    { "path": "../auth" },
-    { "path": "../domain" }
+    {
+      "path": "../db"
+    },
+    {
+      "path": "../auth"
+    },
+    {
+      "path": "../domain"
+    }
   ]
 }

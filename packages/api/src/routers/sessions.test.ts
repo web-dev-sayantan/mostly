@@ -251,9 +251,11 @@ describe("sessionsRouter", () => {
       ],
     });
 
-    expect(result.rejected).toEqual([
-      { opId: "before", reason: "before_start" },
+    expect(
+      result.rejected.toSorted((a, b) => a.opId.localeCompare(b.opId))
+    ).toEqual([
       { opId: "after", reason: "after_archive" },
+      { opId: "before", reason: "before_start" },
       { opId: "deleted", reason: "goal_deleted" },
     ]);
     expect(result.applied).toEqual(["archive-day"]);

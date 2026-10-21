@@ -1,6 +1,7 @@
 import type { RouterClient } from "@orpc/server";
 
-import { protectedProcedure, publicProcedure } from "../index";
+import { protectedProcedure, publicProcedure } from "../procedures";
+import { goalsRouter } from "./goals";
 import { sessionsRouter } from "./sessions";
 
 export const appRouter = {
@@ -9,6 +10,7 @@ export const appRouter = {
     message: "This is private",
     user: context.session?.user,
   })),
+  goals: goalsRouter,
   sessions: sessionsRouter,
 };
 export type AppRouter = typeof appRouter;
