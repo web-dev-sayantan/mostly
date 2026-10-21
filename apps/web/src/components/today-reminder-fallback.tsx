@@ -39,7 +39,8 @@ export const TodayReminderFallback = () => {
   const pushReady =
     Boolean(overview?.configured) &&
     permission === "granted" &&
-    endpoint !== null;
+    endpoint !== null &&
+    overview?.deliveredToday?.status !== "failed";
   const canStillEnable =
     Boolean(overview?.configured) &&
     permission === "default" &&

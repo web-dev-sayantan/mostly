@@ -16,6 +16,7 @@ import {
   sendTestPush,
 } from "@/lib/push";
 import type { PushPermission } from "@/lib/push";
+import { deliveryStatusCopy } from "@/lib/reminder-copy";
 import { formatLogicalDate } from "@/lib/time";
 import { orpc } from "@/utils/orpc";
 
@@ -26,16 +27,16 @@ const permissionCopy = (
   configured: boolean
 ): string => {
   if (!configured) {
-    return "Push is not configured on this server. The reminder shows here when you open Mostly.";
+    return "Notifications aren't available here. The reminder shows when you open Mostly.";
   }
   if (permission === "unsupported") {
-    return "This browser does not support notifications. The reminder shows here when you open Mostly.";
+    return "This browser does not support notifications. The reminder shows when you open Mostly.";
   }
   if (platform === "ios" && !installed) {
-    return "On iPhone and iPad, notifications require an installed home-screen app.";
+    return "On iPhone and iPad, notifications require an installed home-screen app. Until then, the reminder shows when you open Mostly.";
   }
   if (permission === "denied") {
-    return "Notifications are blocked. Allow them in your browser settings.";
+    return "Notifications are blocked. The reminder shows when you open Mostly.";
   }
   if (permission === "granted") {
     return "Notifications are allowed on this device.";
@@ -43,43 +44,16 @@ const permissionCopy = (
   return "Notifications are not enabled on this device yet.";
 };
 
-const deliveryErrorCopy = (error: string | null): string | null => {
-  if (!error) {
-    return null;
-  }
-  if (error === "all_done") {
-    return "All done";
-  }
-  if (error === "no_active_goals") {
-    return "No active goals";
-  }
-  if (error === "nothing_open") {
-    return "Nothing open";
-  }
-  if (error === "no_subscription") {
-    return "No device subscription";
-  }
-  if (error === "push_unconfigured") {
-    return "Push is not configured";
-  }
-  if (error === "sending") {
-    return "Sending";
-  }
-  if (error.startsWith("push_4")) {
-    return "Subscription expired";
-  }
-  return "Could not send";
-};
-
-const statusCopy = (status: "sent" | "failed" | "suppressed"): string => {
-  if (status === "sent") {
-    return "Sent";
-  }
-  if (status === "suppressed") {
-    return "Suppressed";
-  }
-  return "Failed";
-};
+const cannotTest = (
+  permission: PushPermission,
+  platform: ReturnType<typeof pushPlatform>,
+  installed: boolean,
+  configured: boolean
+): boolean =>
+  permission === "unsupported" ||
+  (platform === "ios" && !installed) ||
+  permission === "denied" ||
+  !configured;
 
 const consumePermissionNotice = (permission: PushPermission): boolean => {
   if (!(permission === "denied" || permission === "unsupported")) {
@@ -95,6 +69,36 @@ const consumePermissionNotice = (permission: PushPermission): boolean => {
     return true;
   }
 };
+
+interface Delivery {
+  id: string;
+  logicalDate: string;
+  status: "sent" | "failed" | "suppressed";
+  error: string | null;
+}
+
+const DeliveryLog = ({ deliveries }: { deliveries: readonly Delivery[] }) => (
+  <div className="grid gap-2 border-t pt-4">
+    <h3 className="text-sm font-medium">Delivery log</h3>
+    {deliveries.length === 0 ? (
+      <p className="text-muted-foreground text-sm">No reminders sent yet.</p>
+    ) : (
+      <ul className="grid gap-2 text-sm">
+        {deliveries.map((delivery) => (
+          <li
+            key={delivery.id}
+            className="flex flex-wrap items-baseline justify-between gap-2"
+          >
+            <span>{formatLogicalDate(delivery.logicalDate)}</span>
+            <span className="text-muted-foreground">
+              {deliveryStatusCopy(delivery.status, delivery.error)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+);
 
 export const ReminderSettings = () => {
   const queryClient = useQueryClient();
@@ -152,13 +156,14 @@ export const ReminderSettings = () => {
   const toggle = async (enabled: boolean) => {
     setWorking(true);
     try {
+      // The in-app reminder is the fallback when push cannot work here.
       await (enabled
         ? enablePushReminders(overview?.publicKey ?? undefined)
         : disablePushReminders());
-      update.mutate({ enabled });
+      await update.mutateAsync({ enabled });
       await refreshDevice();
     } catch {
-      toast.error("Could not change the reminder on this device.");
+      // The update mutation reports its own error.
     }
     setWorking(false);
   };
@@ -175,7 +180,7 @@ export const ReminderSettings = () => {
       } else if (result.reason === "denied") {
         toast.error("Notifications are blocked in this browser.");
       } else if (result.reason === "not-configured") {
-        toast.error("Push is not configured on this server.");
+        toast.error("Notifications aren't available here.");
       } else {
         toast.error("Could not send a test notification.");
       }
@@ -190,7 +195,8 @@ export const ReminderSettings = () => {
     overview?.enabled &&
     overview.openCount > 0 &&
     overview.deliveredToday?.status !== "sent" &&
-    !(permission === "granted" && endpoint);
+    (overview.deliveredToday?.status === "failed" ||
+      !(permission === "granted" && endpoint));
 
   return (
     <AccountSection id="reminder" title="Reminder">
@@ -201,7 +207,9 @@ export const ReminderSettings = () => {
       ) : null}
       {overviewQuery.isError ? (
         <div className="grid gap-3">
-          <p className="text-sm">Could not load the reminder.</p>
+          <p role="alert" className="text-sm">
+            Could not load the reminder.
+          </p>
           <Button
             type="button"
             variant="outline"
@@ -273,10 +281,7 @@ export const ReminderSettings = () => {
             className="min-h-11 w-fit px-4 text-sm"
             disabled={
               testing ||
-              permission === "unsupported" ||
-              (platform === "ios" && !installed) ||
-              permission === "denied" ||
-              !overview.configured
+              cannotTest(permission, platform, installed, overview.configured)
             }
             onClick={test}
           >
@@ -289,29 +294,7 @@ export const ReminderSettings = () => {
             </output>
           ) : null}
 
-          <div className="grid gap-2 border-t pt-4">
-            <h3 className="text-sm font-medium">Delivery log</h3>
-            {overview.deliveries.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No reminders yet.</p>
-            ) : (
-              <ul className="grid gap-2 text-sm">
-                {overview.deliveries.map((delivery) => (
-                  <li
-                    key={delivery.id}
-                    className="flex flex-wrap items-baseline justify-between gap-2"
-                  >
-                    <span>{formatLogicalDate(delivery.logicalDate)}</span>
-                    <span className="text-muted-foreground">
-                      {statusCopy(delivery.status)}
-                      {deliveryErrorCopy(delivery.error)
-                        ? ` · ${deliveryErrorCopy(delivery.error)}`
-                        : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <DeliveryLog deliveries={overview.deliveries} />
         </>
       ) : null}
     </AccountSection>

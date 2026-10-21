@@ -172,6 +172,33 @@ describe("reminder delivery", () => {
     });
   });
 
+  it("records no failure when this account has no push subscription", async () => {
+    const alice = await createTestUser(db);
+    await enableReminder(db, alice.user.id);
+    await createGoal(db, alice.user.id);
+
+    const summary = await runReminders({
+      db,
+      now: NOW,
+      sender: { send: () => Promise.resolve() },
+    });
+
+    expect(summary).toMatchObject({ due: 1, sent: 0, failed: 0 });
+    expect(await db.select().from(reminderDelivery)).toEqual([]);
+  });
+
+  it("records no failure when push is not configured", async () => {
+    const alice = await createTestUser(db);
+    await enableReminder(db, alice.user.id);
+    await createGoal(db, alice.user.id);
+    await createSubscription(db, alice.user.id);
+
+    const summary = await runReminders({ db, now: NOW, sender: null });
+
+    expect(summary).toMatchObject({ due: 1, sent: 0, failed: 0 });
+    expect(await db.select().from(reminderDelivery)).toEqual([]);
+  });
+
   it("retries the next subscription without a second reminder", async () => {
     const alice = await createTestUser(db);
     await enableReminder(db, alice.user.id);
