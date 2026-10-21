@@ -273,6 +273,133 @@ describe("deriveOutcomes", () => {
     ]);
   });
 
+  it("keeps a Sunday to Monday change week together and starts Monday after it", () => {
+    const outcomes = deriveOutcomes({
+      goals: [
+        goal({
+          id: "weekly",
+          startDate: "2026-10-04",
+          scheduleVersions: [
+            version("2026-10-04", { type: "weekly_target", target: 2 }),
+          ],
+        }),
+      ],
+      sessions: [
+        session("2026-10-20", { goalId: "weekly" }),
+        session("2026-10-25", { goalId: "weekly" }),
+        session("2026-10-31", { goalId: "weekly" }),
+        session("2026-11-01", { goalId: "weekly" }),
+        session("2026-11-02", { goalId: "weekly" }),
+      ],
+      today: "2026-11-05",
+      settings: [
+        {
+          effectiveFrom: "2026-10-04",
+          timeZone: "UTC",
+          weekStartsOn: 7,
+          dayRolloverHour: 4,
+        },
+        {
+          effectiveFrom: "2026-10-26",
+          timeZone: "UTC",
+          weekStartsOn: 1,
+          dayRolloverHour: 4,
+        },
+      ],
+    });
+
+    expect(outcomes.weekly).toEqual([
+      expect.objectContaining({
+        weekStart: "2026-10-04",
+        weekEnd: "2026-10-10",
+        sessions: 0,
+        outcome: "missed",
+      }),
+      expect.objectContaining({
+        weekStart: "2026-10-11",
+        weekEnd: "2026-10-17",
+        sessions: 0,
+        outcome: "missed",
+      }),
+      expect.objectContaining({
+        weekStart: "2026-10-18",
+        weekEnd: "2026-10-25",
+        sessions: 2,
+        activeDays: 8,
+        outcome: "not_scored",
+      }),
+      expect.objectContaining({
+        weekStart: "2026-10-26",
+        weekEnd: "2026-11-01",
+        sessions: 2,
+        activeDays: 7,
+        outcome: "met",
+      }),
+      expect.objectContaining({
+        weekStart: "2026-11-02",
+        weekEnd: "2026-11-08",
+        sessions: 1,
+        activeDays: 4,
+        outcome: "in_progress",
+      }),
+    ]);
+  });
+
+  it("keeps a Monday to Sunday change week together and starts Sunday after it", () => {
+    const outcomes = deriveOutcomes({
+      goals: [
+        goal({
+          id: "weekly",
+          startDate: "2026-10-05",
+          scheduleVersions: [
+            version("2026-10-05", { type: "weekly_target", target: 2 }),
+          ],
+        }),
+      ],
+      sessions: [
+        session("2026-10-19", { goalId: "weekly" }),
+        session("2026-10-24", { goalId: "weekly" }),
+        session("2026-10-25", { goalId: "weekly" }),
+        session("2026-10-26", { goalId: "weekly" }),
+        session("2026-11-01", { goalId: "weekly" }),
+      ],
+      today: "2026-11-02",
+      settings: [
+        {
+          effectiveFrom: "2026-10-05",
+          timeZone: "UTC",
+          weekStartsOn: 1,
+          dayRolloverHour: 4,
+        },
+        {
+          effectiveFrom: "2026-10-25",
+          timeZone: "UTC",
+          weekStartsOn: 7,
+          dayRolloverHour: 4,
+        },
+      ],
+    });
+    const transition = outcomes.weekly.find(
+      (row) => row.weekStart === "2026-10-19"
+    );
+    const newEra = outcomes.weekly.find(
+      (row) => row.weekStart === "2026-10-25"
+    );
+
+    expect(transition).toMatchObject({
+      weekEnd: "2026-10-24",
+      sessions: 2,
+      activeDays: 6,
+      outcome: "not_scored",
+    });
+    expect(newEra).toMatchObject({
+      weekEnd: "2026-10-31",
+      sessions: 2,
+      activeDays: 7,
+      outcome: "met",
+    });
+  });
+
   it("returns empty outcomes when there is nothing to score", () => {
     expect(
       deriveOutcomes({

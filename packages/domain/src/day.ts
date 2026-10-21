@@ -1,11 +1,9 @@
-import {
-  addLogicalDays,
-  isWithinLastLogicalDays,
-  weekStartOf,
-} from "./logical-day";
+import { addLogicalDays, isWithinLastLogicalDays } from "./logical-day";
 import type { ScheduleVersion } from "./schedule";
 import { isExpectedOn, resolveSchedule } from "./schedule";
 import type { Mood } from "./sync";
+import type { WeekSettingsVersion } from "./weeks";
+import { weekSegmentFor } from "./weeks";
 
 export interface DayGoal {
   id: string;
@@ -74,6 +72,8 @@ export interface ResolveDayInput<Goal extends DayGoal> {
   weekStartsOn: number;
   goals: readonly Goal[];
   sessions: readonly DaySession[];
+  /** The week-start history, so a transition week keeps its old boundaries. */
+  weekStartHistory?: readonly WeekSettingsVersion[];
   skippedDates?: readonly string[];
 }
 
@@ -128,23 +128,33 @@ export const summarizeWeek = <Goal extends DayGoal>({
   date,
   today,
   weekStartsOn,
+  weekStartHistory,
+  skippedDates = [],
 }: {
   goal: Goal;
   sessions: readonly DaySession[];
   date: string;
   today: string;
   weekStartsOn: number;
+  weekStartHistory?: readonly WeekSettingsVersion[];
+  skippedDates?: readonly string[];
 }): WeeklySummary<Goal> | null => {
   const cadence = cadenceOn(goal, date);
   if (cadence?.type !== "weekly_target") {
     return null;
   }
 
-  const weekStart = weekStartOf(date, weekStartsOn);
-  const weekEnd = addLogicalDays(weekStart, 6);
+  const segment = weekSegmentFor(
+    weekStartHistory?.length
+      ? weekStartHistory
+      : [{ effectiveFrom: "0000-01-01", weekStartsOn }],
+    date
+  );
+  const { start: weekStart, end: weekEnd } = segment;
+  const skipped = new Set(skippedDates);
   let activeDays = 0;
   for (let day = weekStart; day <= weekEnd; day = addLogicalDays(day, 1)) {
-    if (isGoalActiveOn(goal, day)) {
+    if (!skipped.has(day) && isGoalActiveOn(goal, day)) {
       activeDays += 1;
     }
   }
@@ -153,7 +163,8 @@ export const summarizeWeek = <Goal extends DayGoal>({
     (session) =>
       session.goalId === goal.id &&
       session.logicalDate >= weekStart &&
-      session.logicalDate <= weekEnd
+      session.logicalDate <= weekEnd &&
+      !skipped.has(session.logicalDate)
   ).length;
 
   if (activeDays === 0 && weekSessions === 0) {
@@ -167,13 +178,15 @@ export const summarizeWeek = <Goal extends DayGoal>({
     target: cadence.target,
     sessions: weekSessions,
     activeDays,
-    status: weeklyOutcome({
-      target: cadence.target,
-      sessions: weekSessions,
-      activeDays,
-      weekEnd,
-      today,
-    }),
+    status: segment.transition
+      ? "not_scored"
+      : weeklyOutcome({
+          target: cadence.target,
+          sessions: weekSessions,
+          activeDays,
+          weekEnd,
+          today,
+        }),
   };
 };
 
@@ -198,6 +211,7 @@ export const resolveDay = <Goal extends DayGoal>({
   weekStartsOn,
   goals,
   sessions,
+  weekStartHistory,
   skippedDates = [],
 }: ResolveDayInput<Goal>): DayResolution<Goal> => {
   if (skippedDates.includes(date)) {
@@ -241,6 +255,8 @@ export const resolveDay = <Goal extends DayGoal>({
       date,
       today,
       weekStartsOn,
+      weekStartHistory,
+      skippedDates,
     });
     if (summary) {
       weekly.push({

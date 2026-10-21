@@ -9,6 +9,7 @@ import {
   weeklyOutcome,
 } from "./day";
 import { addLogicalDays, logicalDate } from "./logical-day";
+import { buildProgress } from "./progress";
 import type { ScheduleVersion } from "./schedule";
 
 const versions = (
@@ -44,13 +45,26 @@ const resolve = ({
   goals,
   sessions = [],
   weekStartsOn = 1,
+  weekStartHistory,
+  skippedDates,
 }: {
   date: string;
   today?: string;
   goals: DayGoal[];
   sessions?: DaySession[];
   weekStartsOn?: number;
-}) => resolveDay({ date, today, goals, sessions, weekStartsOn });
+  weekStartHistory?: { effectiveFrom: string; weekStartsOn: number }[];
+  skippedDates?: string[];
+}) =>
+  resolveDay({
+    date,
+    today,
+    goals,
+    sessions,
+    weekStartsOn,
+    weekStartHistory,
+    skippedDates,
+  });
 
 describe("isGoalActiveOn", () => {
   it("includes the start and archive days and excludes the days outside", () => {
@@ -265,6 +279,99 @@ describe("resolveDay", () => {
     expect(result.weekly[0]).toMatchObject({
       weekStart: "2026-10-18",
       weekEnd: "2026-10-24",
+    });
+  });
+
+  it("uses the Sunday to Monday transition block for weekly detail", () => {
+    const weekStartHistory = [
+      { effectiveFrom: "2020-01-01", weekStartsOn: 7 },
+      { effectiveFrom: "2026-10-26", weekStartsOn: 1 },
+    ];
+    const result = resolve({
+      date: "2026-10-20",
+      goals: [weekly],
+      sessions: [session("singing", "2026-10-20")],
+      weekStartHistory,
+    });
+
+    expect(result.weekly[0]).toMatchObject({
+      weekStart: "2026-10-18",
+      weekEnd: "2026-10-25",
+      sessions: 1,
+      activeDays: 8,
+      status: "not_scored",
+    });
+    const progress = buildProgress({
+      goals: [
+        {
+          ...weekly,
+          name: "Singing",
+          emoji: null,
+          color: null,
+          priority: "medium",
+        },
+      ],
+      sessions: [{ goalId: "singing", logicalDate: "2026-10-20" }],
+      settings: weekStartHistory,
+      today: "2026-10-20",
+      range: 7,
+    });
+    expect(
+      progress.weekly[0]?.weeks.find(
+        (week) => week.weekStart === result.weekly[0]?.weekStart
+      )
+    ).toMatchObject({
+      weekStart: "2026-10-18",
+      weekEnd: "2026-10-25",
+      status: "not_scored",
+    });
+  });
+
+  it("keeps the Monday to Sunday transition block not scored", () => {
+    const result = resolve({
+      date: "2026-10-20",
+      goals: [weekly],
+      sessions: [
+        session("singing", "2026-10-19"),
+        session("singing", "2026-10-24"),
+      ],
+      weekStartHistory: [
+        { effectiveFrom: "2020-01-01", weekStartsOn: 1 },
+        { effectiveFrom: "2026-10-25", weekStartsOn: 7 },
+      ],
+    });
+
+    expect(result.weekly[0]).toMatchObject({
+      weekStart: "2026-10-19",
+      weekEnd: "2026-10-24",
+      sessions: 2,
+      activeDays: 6,
+      status: "not_scored",
+    });
+  });
+
+  it("leaves a skipped date out of weekly active days", () => {
+    const seven = goal({
+      id: "seven",
+      startDate: "2026-10-01",
+      scheduleVersions: versions([
+        "2026-10-01",
+        { type: "weekly_target", target: 7 },
+      ]),
+    });
+    const result = resolve({
+      date: "2026-10-20",
+      today: "2026-10-27",
+      goals: [seven],
+      sessions: [session("seven", "2026-10-21")],
+      skippedDates: ["2026-10-21"],
+    });
+
+    expect(result.weekly[0]).toMatchObject({
+      sessions: 0,
+      activeDays: 6,
+      target: 7,
+      status: "not_scored",
     });
   });
 });

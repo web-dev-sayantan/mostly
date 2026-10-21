@@ -3,6 +3,7 @@ import type { Cadence, ScheduleVersion } from "./schedule";
 import { addDays, isExpectedOn, resolveSchedule } from "./schedule";
 import { weekStartsOnFor } from "./settings";
 import type { Mood } from "./sync";
+import { weekSegments } from "./weeks";
 
 export type StreakUnit = "day" | "week";
 
@@ -283,36 +284,41 @@ const weekBlockStatus = ({
 const buildWeekBlocks = (
   era: InternalEra,
   goal: StatsGoal,
+  settings: readonly StatsSettingsVersion[],
   sessionsByDate: ReadonlyMap<string, StatsSession>,
   today: string,
   skipped: ReadonlySet<string>
 ): GoalWeek[] => {
   const blocks: GoalWeek[] = [];
-  let cursor = era.start;
 
-  while (cursor <= era.end) {
-    const naturalEnd = weekEndOf(cursor, era.weekStartsOn);
-    const blockEnd = naturalEnd < era.end ? naturalEnd : era.end;
+  for (const segment of weekSegments(settings, era.start, era.end)) {
+    const start = segment.start < era.start ? era.start : segment.start;
+    const end = segment.end > era.end ? era.end : segment.end;
+    if (end < start) {
+      continue;
+    }
+    const naturalEnd = weekEndOf(segment.start, era.weekStartsOn);
     const transition =
-      naturalEnd > era.end &&
-      (era.endReason === "unit" || era.endReason === "week_start");
-    const cadence = resolveSchedule(goal.scheduleVersions, cursor);
+      segment.transition ||
+      (naturalEnd > era.end &&
+        (era.endReason === "unit" || era.endReason === "week_start"));
+    const cadence = resolveSchedule(goal.scheduleVersions, start);
     const target = cadence?.type === "weekly_target" ? cadence.target : null;
     const activeEnd =
-      goal.archivedOn && goal.archivedOn < naturalEnd
+      goal.archivedOn && goal.archivedOn < segment.end
         ? goal.archivedOn
-        : naturalEnd;
-    const activeDays = activeEnd >= cursor ? daysBetween(cursor, activeEnd) : 0;
+        : segment.end;
+    const activeDays = activeEnd >= start ? daysBetween(start, activeEnd) : 0;
     let skippedActive = 0;
     for (const date of skipped) {
-      if (date >= cursor && date <= activeEnd) {
+      if (date >= start && date <= activeEnd) {
         skippedActive += 1;
       }
     }
     const activeDayCount = Math.max(0, activeDays - skippedActive);
     let sessionCount = 0;
     for (const date of sessionsByDate.keys()) {
-      if (date >= cursor && date <= blockEnd && !skipped.has(date)) {
+      if (date >= start && date <= end && !skipped.has(date)) {
         sessionCount += 1;
       }
     }
@@ -326,15 +332,14 @@ const buildWeekBlocks = (
     });
 
     blocks.push({
-      start: cursor,
-      end: blockEnd,
+      start,
+      end,
       target,
       sessions: sessionCount,
       activeDays: activeDayCount,
       completed,
       status,
     });
-    cursor = addDays(blockEnd, 1);
   }
 
   return blocks;
@@ -611,7 +616,10 @@ export const goalStats = ({
   const blocksByEra = new Map<InternalEra, GoalWeek[]>();
   for (const era of eras) {
     if (era.unit === "week") {
-      blocksByEra.set(era, buildWeekBlocks(era, goal, byDate, today, skipped));
+      blocksByEra.set(
+        era,
+        buildWeekBlocks(era, goal, settings, byDate, today, skipped)
+      );
     }
   }
 

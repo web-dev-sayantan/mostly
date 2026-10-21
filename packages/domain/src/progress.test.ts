@@ -539,4 +539,101 @@ describe("progress week-start history", () => {
       activeDays: 6,
     });
   });
+
+  it("moves a Sunday to Monday transition week into one not-scored block", () => {
+    const goal = makeGoal("Weekly", {
+      startDate: "2026-10-04",
+      scheduleVersions: [weekly("2026-10-04", 2)],
+    });
+    const result = build({
+      goals: [goal],
+      sessions: makeSessions("Weekly", [
+        "2026-10-20",
+        "2026-10-25",
+        "2026-10-31",
+        "2026-11-01",
+        "2026-11-02",
+      ]),
+      today: "2026-11-05",
+      range: 30,
+      settingVersions: [
+        { effectiveFrom: "2020-01-01", weekStartsOn: 7 },
+        { effectiveFrom: "2026-10-26", weekStartsOn: 1 },
+      ],
+    });
+    const weeks = result.weekly[0]?.weeks ?? [];
+    const byStart = new Map(weeks.map((week) => [week.weekStart, week]));
+
+    expect(byStart.get("2026-10-18")).toMatchObject({
+      weekEnd: "2026-10-25",
+      sessions: 2,
+      activeDays: 8,
+      status: "not_scored",
+    });
+    expect(byStart.get("2026-10-26")).toMatchObject({
+      weekEnd: "2026-11-01",
+      sessions: 2,
+      status: "met",
+    });
+    expect(byStart.get("2026-11-02")).toMatchObject({
+      weekEnd: "2026-11-08",
+      sessions: 1,
+      status: "partial",
+    });
+    expect(byStart.has("2026-11-01")).toBe(false);
+    for (const [index, week] of weeks.entries()) {
+      const next = weeks[index + 1];
+      if (next) {
+        expect(week.weekEnd < next.weekStart).toBe(true);
+      }
+    }
+  });
+
+  it("moves a Monday to Sunday transition week into one not-scored block", () => {
+    const goal = makeGoal("Weekly", {
+      startDate: "2026-10-05",
+      scheduleVersions: [weekly("2026-10-05", 2)],
+    });
+    const result = build({
+      goals: [goal],
+      sessions: makeSessions("Weekly", [
+        "2026-10-19",
+        "2026-10-24",
+        "2026-10-25",
+        "2026-10-26",
+        "2026-11-01",
+      ]),
+      today: "2026-11-02",
+      range: 30,
+      settingVersions: [
+        { effectiveFrom: "2020-01-01", weekStartsOn: 1 },
+        { effectiveFrom: "2026-10-25", weekStartsOn: 7 },
+      ],
+    });
+    const weeks = result.weekly[0]?.weeks ?? [];
+    const byStart = new Map(weeks.map((week) => [week.weekStart, week]));
+
+    expect(byStart.get("2026-10-19")).toMatchObject({
+      weekEnd: "2026-10-24",
+      sessions: 2,
+      activeDays: 6,
+      status: "not_scored",
+    });
+    expect(byStart.get("2026-10-25")).toMatchObject({
+      weekEnd: "2026-10-31",
+      sessions: 2,
+      status: "met",
+    });
+    expect(byStart.get("2026-11-01")).toMatchObject({
+      weekEnd: "2026-11-07",
+      sessions: 1,
+      status: "partial",
+    });
+    for (const [index, week] of weeks.entries()) {
+      const next = weeks[index + 1];
+      if (next) {
+        expect(week.weekEnd < next.weekStart).toBe(true);
+      }
+    }
+  });
 });

@@ -104,6 +104,8 @@ export type {
   StreakUnit,
 } from "./stats";
 export { goalStats, minutesOf, overallConsistency } from "./stats";
+export type { WeekSegment, WeekSettingsVersion } from "./weeks";
+export { weekSegmentFor, weekSegments } from "./weeks";
 export type {
   BuildProgressInput,
   ProgressDot,

@@ -1,6 +1,6 @@
 import type { WeeklyOutcome } from "./day";
 import { isGoalActiveOn, weeklyOutcome } from "./day";
-import { addLogicalDays, weekEndOf, weekStartOf } from "./logical-day";
+import { addLogicalDays, weekStartOf } from "./logical-day";
 import type { Cadence, ScheduleVersion } from "./schedule";
 import { isExpectedOn, resolveSchedule } from "./schedule";
 import { weekStartsOnFor } from "./settings";
@@ -11,6 +11,7 @@ import type {
   StreakUnit,
 } from "./stats";
 import { goalStats, minutesOf, overallConsistency } from "./stats";
+import { weekSegments } from "./weeks";
 
 export const PROGRESS_RANGES = [7, 30, 90] as const;
 export type ProgressRange = (typeof PROGRESS_RANGES)[number];
@@ -138,39 +139,6 @@ export interface BuildProgressInput {
 const HEATMAP_WEEKS = 12;
 const CARD_DAYS = 7;
 const CARD_WEEKS = 7;
-
-interface WeekSegment {
-  start: string;
-  end: string;
-  transition: boolean;
-}
-
-/** Split a range into weeks using the week-start setting in effect at each start. */
-const weekSegments = (
-  settings: readonly ProgressSettingsVersion[],
-  from: string,
-  to: string
-): WeekSegment[] => {
-  const segments: WeekSegment[] = [];
-  let cursor = weekStartOf(from, weekStartsOnFor(settings, from));
-
-  while (cursor <= to) {
-    const weekStartsOn = weekStartsOnFor(settings, cursor);
-    const naturalEnd = weekEndOf(cursor, weekStartsOn);
-    const nextStartsOn = weekStartsOnFor(
-      settings,
-      addLogicalDays(naturalEnd, 1)
-    );
-    const transition =
-      nextStartsOn !== weekStartsOn &&
-      weekStartOf(naturalEnd, nextStartsOn) === naturalEnd;
-    const end = transition ? addLogicalDays(naturalEnd, -1) : naturalEnd;
-    segments.push({ start: cursor, end, transition });
-    cursor = addLogicalDays(end, 1);
-  }
-
-  return segments;
-};
 
 const cadenceOn = (goal: ProgressGoal, date: string): Cadence | null =>
   resolveSchedule(goal.scheduleVersions, date) ??
