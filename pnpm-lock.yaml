@@ -309,6 +309,9 @@ importers:
       '@mostly/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@mostly/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@mostly/ui':
         specifier: workspace:*
         version: link:../../packages/ui
