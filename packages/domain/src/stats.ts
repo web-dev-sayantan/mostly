@@ -387,7 +387,7 @@ const buildDays = (
   return days;
 };
 
-const minutesOf = (sessions: readonly StatsSession[]): GoalMinutes => {
+export const minutesOf = (sessions: readonly StatsSession[]): GoalMinutes => {
   const withMinutes = sessions.filter(
     (entry) => typeof entry.minutes === "number" && entry.minutes > 0
   );
