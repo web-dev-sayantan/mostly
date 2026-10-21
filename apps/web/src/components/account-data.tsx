@@ -21,23 +21,23 @@ const HOUR_MS = 60 * MINUTE_MS;
 
 const formatLastSynced = (at: number | null): string => {
   if (at === null) {
-    return "Not synced on this device yet.";
+    return "Not synced on this device yet";
   }
 
   const elapsed = Math.max(0, Date.now() - at);
   if (elapsed < MINUTE_MS) {
-    return "Last synced just now.";
+    return "Last synced just now";
   }
   if (elapsed < HOUR_MS) {
-    return `Last synced ${Math.floor(elapsed / MINUTE_MS)}m ago.`;
+    return `Last synced ${Math.floor(elapsed / MINUTE_MS)}m ago`;
   }
   if (elapsed < 24 * HOUR_MS) {
-    return `Last synced ${Math.floor(elapsed / HOUR_MS)}h ago.`;
+    return `Last synced ${Math.floor(elapsed / HOUR_MS)}h ago`;
   }
   return `Last synced ${new Date(at).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
-  })}.`;
+  })}`;
 };
 
 const downloadExport = (exportedAt: string, document: unknown): void => {
@@ -284,12 +284,8 @@ const DeleteAccountControl = ({
           autoComplete="off"
           spellCheck={false}
           className="min-h-11 max-w-64 text-base"
-          aria-describedby="delete-account-note"
           onChange={(event) => setConfirmation(event.target.value)}
         />
-        <p id="delete-account-note" className="text-muted-foreground text-sm">
-          This can&apos;t be undone.
-        </p>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button
