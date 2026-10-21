@@ -1,3 +1,4 @@
+// oxlint-disable eslint/no-inline-comments
 import { defineRelationsPart, sql } from "drizzle-orm";
 import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 
@@ -5,8 +6,13 @@ export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  emailVerified: integer("email_verified", { mode: "boolean" }).default(false).notNull(),
+  emailVerified: integer("email_verified", { mode: "boolean" })
+    .default(false)
+    .notNull(),
   image: text("image"),
+  timeZone: text("timezone"),
+  weekStartsOn: integer("week_starts_on").notNull().default(1),
+  dayRolloverHour: integer("day_rollover_hour").notNull().default(4),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
@@ -34,7 +40,7 @@ export const authSession = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
-  (table) => [index("auth_session_userId_idx").on(table.userId)],
+  (table) => [index("auth_session_userId_idx").on(table.userId)]
 );
 
 export const account = sqliteTable(
@@ -64,7 +70,7 @@ export const account = sqliteTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (table) => [index("account_userId_idx").on(table.userId)],
+  (table) => [index("account_userId_idx").on(table.userId)]
 );
 
 export const verification = sqliteTable(
@@ -82,7 +88,7 @@ export const verification = sqliteTable(
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
   },
-  (table) => [index("verification_identifier_idx").on(table.identifier)],
+  (table) => [index("verification_identifier_idx").on(table.identifier)]
 );
 
 export const authRelations = defineRelationsPart(
@@ -110,5 +116,5 @@ export const authRelations = defineRelationsPart(
         to: r.user.id,
       }),
     },
-  }),
+  })
 );
