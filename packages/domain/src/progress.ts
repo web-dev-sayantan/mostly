@@ -562,10 +562,10 @@ export const buildProgress = ({
       goal.startDate <= today &&
       (goal.archivedOn === null || goal.archivedOn >= today)
   );
-  const rangeSessions = sessions.filter((entry) => {
-    const date = entry.logicalDate;
-    return date >= addLogicalDays(today, -range) && date < today;
-  });
+  const rangeStart = addLogicalDays(today, -range);
+  const rangeSessions = sessions.filter(
+    (entry) => entry.logicalDate >= rangeStart && entry.logicalDate < today
+  );
 
   const cards: ProgressGoalCard[] = activeGoals.map((goal) => {
     const stats = goalStats({
