@@ -309,6 +309,9 @@ importers:
       '@mostly/api':
         specifier: workspace:*
         version: link:../../packages/api
+      '@mostly/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@mostly/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -403,6 +406,9 @@ importers:
       '@mostly/db':
         specifier: workspace:*
         version: link:../db
+      '@mostly/domain':
+        specifier: workspace:*
+        version: link:../domain
       '@orpc/client':
         specifier: 'catalog:'
         version: 1.15.7
