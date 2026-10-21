@@ -9,6 +9,25 @@ export {
   weekdayOf,
 } from "./logical-day";
 export type {
+  DayExpectation,
+  DayExpectationStatus,
+  DayExtra,
+  DayGoal,
+  DayResolution,
+  DaySession,
+  DayWeeklySummary,
+  ResolveDayInput,
+  WeeklyOutcome,
+  WeeklySummary,
+} from "./day";
+export {
+  isDayEditable,
+  isGoalActiveOn,
+  resolveDay,
+  summarizeWeek,
+  weeklyOutcome,
+} from "./day";
+export type {
   Cadence,
   SchedulePlan,
   ScheduleVersion,

@@ -1,6 +1,7 @@
 import type { RouterClient } from "@orpc/server";
 
 import { protectedProcedure, publicProcedure } from "../procedures";
+import { daysRouter } from "./days";
 import { goalsRouter } from "./goals";
 import { sessionsRouter } from "./sessions";
 import { settingsRouter } from "./settings";
@@ -11,6 +12,7 @@ export const appRouter = {
     message: "This is private",
     user: context.session?.user,
   })),
+  days: daysRouter,
   goals: goalsRouter,
   settings: settingsRouter,
   sessions: sessionsRouter,
