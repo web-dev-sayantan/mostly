@@ -41,7 +41,7 @@ const weekLabel = (week: ProgressWeekCell): string => {
     return `Target met (${week.sessions} sessions)`;
   }
   if (week.status === "partial") {
-    return `${week.sessions} of ${week.target} sessions`;
+    return `${week.sessions} of ${week.target} this week`;
   }
   if (week.status === "not_scored") {
     return "Not enough days this week";
