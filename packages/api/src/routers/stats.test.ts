@@ -186,7 +186,12 @@ describe("stats router goal detail", () => {
       date: "2026-02-01",
       status: "done",
       readOnly: false,
+      sessionId: expect.any(String),
+      updatedAt: expect.any(Number),
     });
+    expect(
+      detail.recentDays.find((day) => day.date === "2026-01-29")
+    ).toMatchObject({ status: "missed", sessionId: null, updatedAt: null });
   });
 
   it("returns a frozen, read-only record for an archived goal", async () => {
