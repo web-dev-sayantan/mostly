@@ -24,7 +24,10 @@ export const isIsoDate = (value: string): boolean => {
   if (!ISO_DATE.test(value)) {
     return false;
   }
-  return new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
+  const date = new Date(`${value}T00:00:00Z`);
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
 };
 
 export const addDays = (date: string, days: number): string =>

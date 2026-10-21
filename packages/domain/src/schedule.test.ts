@@ -37,6 +37,7 @@ describe("schedule dates", () => {
   it("accepts real dates only", () => {
     expect(isIsoDate("2026-10-20")).toBe(true);
     expect(isIsoDate("2026-02-30")).toBe(false);
+    expect(isIsoDate("2026-13-01")).toBe(false);
     expect(isIsoDate("20/10/2026")).toBe(false);
   });
 });

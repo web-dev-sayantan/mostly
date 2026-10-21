@@ -127,6 +127,12 @@ describe("goals router", () => {
     await expect(
       aliceClient.goals.create({
         ...baseGoal(),
+        startDate: "2026-13-01",
+      })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      aliceClient.goals.create({
+        ...baseGoal(),
         cadence: { type: "weekdays", weekdays: [] },
       })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });

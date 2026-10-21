@@ -64,6 +64,7 @@ export const localDate = (now = new Date()): string =>
     now.getDate()
   ).padStart(2, "0")}`;
 
+/** shortcut: wall-clock day until #4's logical day settings reach the client. */
 export const localToday = (): string => localDate();
 
 /** Today, or tomorrow once the 9:30 PM default reminder time has passed. */
