@@ -59,6 +59,8 @@ export interface DayResolution<Goal extends DayGoal = DayGoal> {
   date: string;
   today: string;
   readOnly: boolean;
+  /** The timezone jump skipped this date: no expectations and no data. */
+  skipped: boolean;
   expectations: DayExpectation<Goal>[];
   extras: DayExtra<Goal>[];
   weekly: DayWeeklySummary<Goal>[];
@@ -72,6 +74,7 @@ export interface ResolveDayInput<Goal extends DayGoal> {
   weekStartsOn: number;
   goals: readonly Goal[];
   sessions: readonly DaySession[];
+  skippedDates?: readonly string[];
 }
 
 type GoalLife = Pick<DayGoal, "startDate" | "archivedOn">;
@@ -195,7 +198,21 @@ export const resolveDay = <Goal extends DayGoal>({
   weekStartsOn,
   goals,
   sessions,
+  skippedDates = [],
 }: ResolveDayInput<Goal>): DayResolution<Goal> => {
+  if (skippedDates.includes(date)) {
+    return {
+      date,
+      today,
+      readOnly: true,
+      skipped: true,
+      expectations: [],
+      extras: [],
+      weekly: [],
+      candidates: [],
+    };
+  }
+
   const goalsById = new Map(goals.map((entry) => [entry.id, entry]));
   const daySessions = sessions.filter((entry) => entry.logicalDate === date);
 
@@ -264,6 +281,7 @@ export const resolveDay = <Goal extends DayGoal>({
     date,
     today,
     readOnly: !isWithinLastLogicalDays(date, today),
+    skipped: false,
     expectations,
     extras,
     weekly,

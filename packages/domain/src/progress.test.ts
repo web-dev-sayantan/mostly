@@ -62,18 +62,23 @@ const build = ({
   sessions = [],
   range = 30,
   today = TODAY,
+  settingVersions = settings,
+  skippedDates = [],
 }: {
   goals: ProgressGoal[];
   sessions?: ProgressSession[];
   range?: 7 | 30 | 90;
   today?: string;
+  settingVersions?: { effectiveFrom: string; weekStartsOn: number }[];
+  skippedDates?: string[];
 }) =>
   buildProgress({
     goals,
     sessions,
-    settings,
+    settings: settingVersions,
     today,
     range,
+    skippedDates,
   });
 
 describe("progress consistency", () => {
@@ -475,5 +480,63 @@ describe("progress today and empty state", () => {
     expect(seven.empty).toBe(false);
     expect(future.empty).toBe(true);
     expect(none.empty).toBe(true);
+  });
+});
+
+describe("progress week-start history", () => {
+  it("keeps each past week under the week-start setting in effect then", () => {
+    const goal = makeGoal("Weekly", {
+      startDate: "2026-09-01",
+      scheduleVersions: [weekly("2026-09-01", 3)],
+    });
+    const result = build({
+      goals: [goal],
+      sessions: makeSessions("Weekly", [
+        "2026-10-12",
+        "2026-10-13",
+        "2026-10-18",
+      ]),
+      today: "2026-11-10",
+      range: 30,
+      settingVersions: [
+        { effectiveFrom: "2020-01-01", weekStartsOn: 1 },
+        { effectiveFrom: "2026-10-25", weekStartsOn: 7 },
+      ],
+    });
+
+    expect(result.cards[0]?.consistency).toMatchObject({
+      done: 1,
+      expected: 4,
+      percent: 25,
+      qualified: true,
+    });
+  });
+
+  it("excludes a skipped date from active days and sessions", () => {
+    const goal = makeGoal("Weekly", {
+      startDate: "2026-10-05",
+      scheduleVersions: [weekly("2026-10-05", 3)],
+    });
+    const result = build({
+      goals: [goal],
+      sessions: makeSessions("Weekly", [
+        "2026-10-05",
+        "2026-10-06",
+        "2026-10-07",
+      ]),
+      today: "2026-10-12",
+      range: 7,
+      skippedDates: ["2026-10-07"],
+    });
+
+    expect(result.heatmap.days.find((day) => day.date === "2026-10-07")).toMatchObject(
+      { expected: 0, done: 0, extras: 0, intensity: "neutral" }
+    );
+    expect(
+      result.weekly[0]?.weeks.find((week) => week.weekStart === "2026-10-05")
+    ).toMatchObject({
+      sessions: 2,
+      activeDays: 6,
+    });
   });
 });

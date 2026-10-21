@@ -25,6 +25,7 @@ const statsFor = ({
   archivedOn = null,
   weekStartsOn = 1,
   settingVersions,
+  skippedDates = [],
 }: {
   startDate: string;
   today: string;
@@ -38,12 +39,14 @@ const statsFor = ({
   archivedOn?: string | null;
   weekStartsOn?: number;
   settingVersions?: { effectiveFrom: string; weekStartsOn: number }[];
+  skippedDates?: string[];
 }) =>
   goalStats({
     goal: { startDate, archivedOn, scheduleVersions: versions },
     sessions: durations,
     settings: settingVersions ?? settings(weekStartsOn),
     today,
+    skippedDates,
   });
 
 describe("goalStats daily consistency", () => {
@@ -134,10 +137,39 @@ describe("goalStats daily consistency", () => {
       qualified: false,
     });
   });
+
+  it("excludes a date the timezone jump skipped from expectations and sessions", () => {
+    const stats = statsFor({
+      startDate: "2026-01-01",
+      today: "2026-01-10",
+      skippedDates: ["2026-01-05"],
+      durations: sessions(
+        "2026-01-01",
+        "2026-01-02",
+        "2026-01-03",
+        "2026-01-04",
+        "2026-01-05"
+      ),
+    });
+
+    expect(stats.consistency).toEqual({
+      done: 4,
+      expected: 8,
+      percent: 50,
+      qualified: true,
+    });
+    expect(stats.sessions).toBe(4);
+    expect(stats.bestStreak).toBe(4);
+    expect(stats.days.find((day) => day.date === "2026-01-05")).toMatchObject({
+      expected: false,
+      extra: false,
+      status: "none",
+    });
+  });
 });
 
 describe("goalStats weekday goals", () => {
-  it("omits off days from expectations, streaks, and consistency", () => {
+  it("omits unscheduled days from expectations, streaks, and consistency", () => {
     const stats = statsFor({
       startDate: "2026-01-05",
       today: "2026-01-13",
@@ -164,7 +196,7 @@ describe("goalStats weekday goals", () => {
     expect(stats.bestStreak).toBe(2);
   });
 
-  it("a missed expected weekday breaks the streak even across off days", () => {
+  it("a missed expected weekday breaks the streak even across unscheduled days", () => {
     const stats = statsFor({
       startDate: "2026-01-05",
       today: "2026-01-10",
@@ -179,7 +211,7 @@ describe("goalStats weekday goals", () => {
     expect(stats.bestStreak).toBe(1);
   });
 
-  it("does not let an extra session on an off day extend the streak", () => {
+  it("does not let an extra session on an unscheduled day extend the streak", () => {
     const stats = statsFor({
       startDate: "2026-01-05",
       today: "2026-01-13",

@@ -198,7 +198,7 @@ describe("resolveDay", () => {
     ).toBe("done");
   });
 
-  it("treats an off-day session as an extra without an expectation", () => {
+  it("treats an unscheduled day session as an extra without an expectation", () => {
     const offDay = session("guitar", "2026-10-20");
     const result = resolve({
       date: "2026-10-20",
@@ -233,6 +233,26 @@ describe("resolveDay", () => {
         goals: [future, archived, weekdaysArchived],
       }).candidates
     ).toEqual([]);
+  });
+
+  it("skips a date the timezone jump never produced", () => {
+    const result = resolveDay({
+      date: "2026-10-21",
+      today: "2026-10-22",
+      weekStartsOn: 1,
+      goals: [daily, weekly],
+      sessions: [session("reading", "2026-10-21")],
+      skippedDates: ["2026-10-21"],
+    });
+
+    expect(result).toMatchObject({
+      skipped: true,
+      readOnly: true,
+      expectations: [],
+      extras: [],
+      weekly: [],
+      candidates: [],
+    });
   });
 
   it("summarises a weekly target with a Sunday week start", () => {

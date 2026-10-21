@@ -1,6 +1,7 @@
 import { weekEndOf, weekStartOf } from "./logical-day";
 import type { Cadence, ScheduleVersion } from "./schedule";
 import { addDays, isExpectedOn, resolveSchedule } from "./schedule";
+import { weekStartsOnFor } from "./settings";
 import type { Mood } from "./sync";
 
 export type StreakUnit = "day" | "week";
@@ -28,6 +29,8 @@ export interface GoalStatsInput {
   sessions: readonly StatsSession[];
   settings: readonly StatsSettingsVersion[];
   today: string;
+  /** Logical dates skipped by a timezone jump; they never count. */
+  skippedDates?: readonly string[];
 }
 
 export type GoalDayStatus = "done" | "missed" | "open" | "none";
@@ -117,22 +120,7 @@ const unitOf = (cadence: Cadence | null): StreakUnit | null => {
 const weekStartOn = (
   settings: readonly StatsSettingsVersion[],
   date: string
-): number => {
-  let effective: StatsSettingsVersion | undefined;
-  let earliest: StatsSettingsVersion | undefined;
-  for (const version of settings) {
-    if (
-      version.effectiveFrom <= date &&
-      (!effective || version.effectiveFrom >= effective.effectiveFrom)
-    ) {
-      effective = version;
-    }
-    if (!earliest || version.effectiveFrom < earliest.effectiveFrom) {
-      earliest = version;
-    }
-  }
-  return effective?.weekStartsOn ?? earliest?.weekStartsOn ?? 1;
-};
+): number => weekStartsOnFor(settings, date);
 
 /**
  * Era boundaries follow the cadence unit, never the weekdays or target. A week-start
@@ -141,7 +129,8 @@ const weekStartOn = (
 const buildEras = (
   goal: StatsGoal,
   settings: readonly StatsSettingsVersion[],
-  historyEnd: string
+  historyEnd: string,
+  skipped: ReadonlySet<string>
 ): InternalEra[] => {
   const eras: InternalEra[] = [];
   let era: InternalEra | null = null;
@@ -156,6 +145,9 @@ const buildEras = (
   };
 
   for (let date = goal.startDate; date <= historyEnd; date = addDays(date, 1)) {
+    if (skipped.has(date)) {
+      continue;
+    }
     const unit = unitOf(resolveSchedule(goal.scheduleVersions, date));
     if (!unit) {
       close(addDays(date, -1), "unit");
@@ -195,12 +187,13 @@ const dailyBestStreak = (
   era: InternalEra,
   versions: readonly ScheduleVersion[],
   sessionDates: ReadonlySet<string>,
-  today: string
+  today: string,
+  skipped: ReadonlySet<string>
 ): number => {
   let run = 0;
   let best = 0;
   for (let date = era.start; date <= era.end; date = addDays(date, 1)) {
-    if (!hasExpectedDay(versions, date)) {
+    if (skipped.has(date) || !hasExpectedDay(versions, date)) {
       continue;
     }
     if (sessionDates.has(date)) {
@@ -217,11 +210,12 @@ const dailyCurrentStreak = (
   era: InternalEra,
   versions: readonly ScheduleVersion[],
   sessionDates: ReadonlySet<string>,
-  today: string
+  today: string,
+  skipped: ReadonlySet<string>
 ): number => {
   let run = 0;
   for (let date = era.end; date >= era.start; date = addDays(date, -1)) {
-    if (!hasExpectedDay(versions, date)) {
+    if (skipped.has(date) || !hasExpectedDay(versions, date)) {
       continue;
     }
     if (sessionDates.has(date)) {
@@ -239,14 +233,15 @@ const countDailyUnits = (
   era: InternalEra,
   versions: readonly ScheduleVersion[],
   sessionDates: ReadonlySet<string>,
-  today: string
+  today: string,
+  skipped: ReadonlySet<string>
 ): { expected: number; done: number } => {
   let expected = 0;
   let done = 0;
   const lastCompleted = addDays(today, -1);
   const end = era.end < lastCompleted ? era.end : lastCompleted;
   for (let date = era.start; date <= end; date = addDays(date, 1)) {
-    if (!hasExpectedDay(versions, date)) {
+    if (skipped.has(date) || !hasExpectedDay(versions, date)) {
       continue;
     }
     expected += 1;
@@ -267,7 +262,8 @@ const buildWeekBlocks = (
   era: InternalEra,
   goal: StatsGoal,
   sessionsByDate: ReadonlyMap<string, StatsSession>,
-  today: string
+  today: string,
+  skipped: ReadonlySet<string>
 ): GoalWeek[] => {
   const blocks: GoalWeek[] = [];
   let cursor = era.start;
@@ -285,16 +281,20 @@ const buildWeekBlocks = (
         ? goal.archivedOn
         : naturalEnd;
     const activeDays = activeEnd >= cursor ? daysBetween(cursor, activeEnd) : 0;
+    const skippedActive = [...skipped].filter(
+      (date) => date >= cursor && date <= activeEnd
+    ).length;
+    const activeDayCount = Math.max(0, activeDays - skippedActive);
     let sessionCount = 0;
     for (const date of sessionsByDate.keys()) {
-      if (date >= cursor && date <= blockEnd) {
+      if (date >= cursor && date <= blockEnd && !skipped.has(date)) {
         sessionCount += 1;
       }
     }
     const completed = naturalEnd < today;
 
     let status: GoalWeekStatus;
-    if (!target || transition || activeDays < target) {
+    if (!target || transition || activeDayCount < target) {
       status = "not_scored";
     } else if (sessionCount >= target) {
       status = "met";
@@ -309,7 +309,7 @@ const buildWeekBlocks = (
       end: blockEnd,
       target,
       sessions: sessionCount,
-      activeDays,
+      activeDays: activeDayCount,
       completed,
       status,
     });
@@ -354,12 +354,25 @@ const buildDays = (
   sessionsByDate: ReadonlyMap<string, StatsSession>,
   historyEnd: string,
   today: string,
-  weekStartsOn: number
+  weekStartsOn: number,
+  skipped: ReadonlySet<string>
 ): GoalDay[] => {
   const start = addDays(weekStartOf(historyEnd, weekStartsOn), -77);
   const days: GoalDay[] = [];
 
   for (let date = start; date <= historyEnd; date = addDays(date, 1)) {
+    if (skipped.has(date)) {
+      days.push({
+        date,
+        expected: false,
+        extra: false,
+        status: "none",
+        minutes: null,
+        mood: null,
+        note: null,
+      });
+      continue;
+    }
     const session = sessionsByDate.get(date);
     const active =
       date >= goal.startDate &&
@@ -414,7 +427,8 @@ const sumDailyUnits = (
   eras: readonly InternalEra[],
   versions: readonly ScheduleVersion[],
   sessionDates: ReadonlySet<string>,
-  today: string
+  today: string,
+  skipped: ReadonlySet<string>
 ): UnitCounts => {
   let expected = 0;
   let done = 0;
@@ -422,7 +436,7 @@ const sumDailyUnits = (
     if (era.unit !== "day") {
       continue;
     }
-    const counts = countDailyUnits(era, versions, sessionDates, today);
+    const counts = countDailyUnits(era, versions, sessionDates, today, skipped);
     expected += counts.expected;
     done += counts.done;
   }
@@ -478,7 +492,8 @@ const buildEraStats = (
   goal: StatsGoal,
   sessionDates: ReadonlySet<string>,
   today: string,
-  blocksByEra: ReadonlyMap<InternalEra, GoalWeek[]>
+  blocksByEra: ReadonlyMap<InternalEra, GoalWeek[]>,
+  skipped: ReadonlySet<string>
 ): StreakEra[] =>
   eras.map((era) => ({
     startDate: era.start,
@@ -486,7 +501,13 @@ const buildEraStats = (
     unit: era.unit,
     bestStreak:
       era.unit === "day"
-        ? dailyBestStreak(era, goal.scheduleVersions, sessionDates, today)
+        ? dailyBestStreak(
+            era,
+            goal.scheduleVersions,
+            sessionDates,
+            today,
+            skipped
+          )
         : weeklyBestStreak(blocksByEra.get(era) ?? []),
   }));
 
@@ -496,13 +517,20 @@ const currentStreakOf = (
   goal: StatsGoal,
   sessionDates: ReadonlySet<string>,
   today: string,
-  blocksByEra: ReadonlyMap<InternalEra, GoalWeek[]>
+  blocksByEra: ReadonlyMap<InternalEra, GoalWeek[]>,
+  skipped: ReadonlySet<string>
 ): number | null => {
   if (archived || !era) {
     return null;
   }
   if (era.unit === "day") {
-    return dailyCurrentStreak(era, goal.scheduleVersions, sessionDates, today);
+    return dailyCurrentStreak(
+      era,
+      goal.scheduleVersions,
+      sessionDates,
+      today,
+      skipped
+    );
   }
   return weeklyCurrentStreak(blocksByEra.get(era) ?? []);
 };
@@ -533,7 +561,9 @@ export const goalStats = ({
   sessions,
   settings,
   today,
+  skippedDates = [],
 }: GoalStatsInput): GoalStats => {
+  const skipped = new Set(skippedDates);
   const futureStart = goal.startDate > today;
   if (futureStart) {
     return futureStats(goal.startDate, today, weekStartOn(settings, today));
@@ -546,6 +576,7 @@ export const goalStats = ({
   const byDate = new Map<string, StatsSession>();
   for (const entry of sessions) {
     if (
+      !skipped.has(entry.logicalDate) &&
       entry.logicalDate >= goal.startDate &&
       entry.logicalDate <= historyEnd
     ) {
@@ -553,13 +584,16 @@ export const goalStats = ({
     }
   }
   const sessionDates = new Set(byDate.keys());
-  const eras = buildEras(goal, settings, historyEnd);
+  const eras = buildEras(goal, settings, historyEnd, skipped);
   const currentEra = eras.at(-1) ?? null;
   const unit = currentEra?.unit ?? "day";
   const blocksByEra = new Map<InternalEra, GoalWeek[]>();
   for (const era of eras) {
     if (era.unit === "week") {
-      blocksByEra.set(era, buildWeekBlocks(era, goal, byDate, today));
+      blocksByEra.set(
+        era,
+        buildWeekBlocks(era, goal, byDate, today, skipped)
+      );
     }
   }
 
@@ -567,11 +601,19 @@ export const goalStats = ({
     eras,
     goal.scheduleVersions,
     sessionDates,
-    today
+    today,
+    skipped
   );
   const weeklyUnits = sumWeeklyUnits(eras, blocksByEra);
   const consistency = consistencyOf(unit, dailyUnits, weeklyUnits);
-  const eraStats = buildEraStats(eras, goal, sessionDates, today, blocksByEra);
+  const eraStats = buildEraStats(
+    eras,
+    goal,
+    sessionDates,
+    today,
+    blocksByEra,
+    skipped
+  );
   const currentStats = eraStats.at(-1);
   const currentStreak = currentStreakOf(
     currentEra,
@@ -579,7 +621,8 @@ export const goalStats = ({
     goal,
     sessionDates,
     today,
-    blocksByEra
+    blocksByEra,
+    skipped
   );
   const currentWeeks =
     currentEra?.unit === "week"
@@ -587,7 +630,9 @@ export const goalStats = ({
       : [];
   const activeSessions = sessions.filter(
     (entry) =>
-      entry.logicalDate >= goal.startDate && entry.logicalDate <= historyEnd
+      !skipped.has(entry.logicalDate) &&
+      entry.logicalDate >= goal.startDate &&
+      entry.logicalDate <= historyEnd
   );
 
   return {
@@ -603,7 +648,14 @@ export const goalStats = ({
     eras: eraStats,
     sessions: activeSessions.length,
     minutes: minutesOf(activeSessions),
-    days: buildDays(goal, byDate, historyEnd, today, weekStartsOn),
+    days: buildDays(
+      goal,
+      byDate,
+      historyEnd,
+      today,
+      weekStartsOn,
+      skipped
+    ),
     weeks: currentWeeks,
   };
 };

@@ -12,6 +12,7 @@ export {
   isBeforeRollover,
   isWithinLastLogicalDays,
   logicalDate,
+  nextLogicalBoundary,
   weekEndOf,
   weekStartOf,
   weekdayOf,
@@ -76,7 +77,14 @@ export type {
   SettingValues,
   SettingVersion,
 } from "./settings";
-export { planSettingChange, settingsForDate } from "./settings";
+export {
+  planSettingChange,
+  resolveSettingsForNow,
+  settingsForDate,
+  skippedDatesForTimeZoneChange,
+  skippedDatesOf,
+  weekStartsOnFor,
+} from "./settings";
 export type {
   GoalConsistency,
   GoalDay,
