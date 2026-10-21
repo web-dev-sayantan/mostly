@@ -187,6 +187,41 @@ describe("sync engine", () => {
     expect(store.getQueue()).toHaveLength(1);
   });
 
+  it("keeps queued sessions and recovers after auth is renewed", async () => {
+    const { store, engine, respondTo } = setup();
+    const op = queuedOp(store);
+    respondTo(() =>
+      Promise.reject(
+        Object.assign(new Error("Unauthorized"), { code: "UNAUTHORIZED" })
+      )
+    );
+
+    await engine.syncNow();
+    expect(engine.getStatus().authExpired).toBe(true);
+
+    respondTo((ops) =>
+      Promise.resolve({
+        applied: ops.map((queued) => queued.opId),
+        winners: [
+          record({
+            id: op.id,
+            updatedAt: ops[0]?.updatedAt ?? 0,
+          }),
+        ],
+        conflicts: [],
+        rejected: [],
+      })
+    );
+    engine.retry();
+    await engine.syncNow();
+
+    expect(store.getQueue()).toHaveLength(0);
+    expect(engine.getStatus()).toMatchObject({
+      state: "synced",
+      authExpired: false,
+    });
+  });
+
   it("stores a conflict copy and removes the losing op", async () => {
     const { store, engine, clock, respondTo } = setup();
     const op = queuedOp(store);
