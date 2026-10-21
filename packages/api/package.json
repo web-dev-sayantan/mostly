@@ -12,6 +12,7 @@
   "dependencies": {
     "@mostly/auth": "workspace:*",
     "@mostly/db": "workspace:*",
+    "@mostly/domain": "workspace:*",
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
