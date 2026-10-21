@@ -1,7 +1,8 @@
-import { type Cadence, addDays, nextWeekStart, resolveSchedule } from "@mostly/domain";
 import type { Database } from "@mostly/db";
 import { goal } from "@mostly/db/schema/goals";
 import { createTestDb } from "@mostly/db/testing";
+import { addDays, nextWeekStart, resolveSchedule } from "@mostly/domain";
+import type { Cadence } from "@mostly/domain";
 import { createRouterClient } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
@@ -17,8 +18,10 @@ const baseGoal = () => ({
   startDate: today(),
 });
 
-const cadenceOf = (versions: { effectiveFrom: string; cadence: Cadence }[], date: string) =>
-  resolveSchedule(versions, date);
+const cadenceOf = (
+  versions: { effectiveFrom: string; cadence: Cadence }[],
+  date: string
+) => resolveSchedule(versions, date);
 
 describe("goals router", () => {
   let db: Database;
@@ -33,14 +36,24 @@ describe("goals router", () => {
   });
 
   const clients = async () => {
-    const alice = await createTestUser(db, { email: "alice@example.com", name: "Alice" });
-    const bob = await createTestUser(db, { email: "bob@example.com", name: "Bob" });
+    const alice = await createTestUser(db, {
+      email: "alice@example.com",
+      name: "Alice",
+    });
+    const bob = await createTestUser(db, {
+      email: "bob@example.com",
+      name: "Bob",
+    });
 
     return {
       alice,
       bob,
-      aliceClient: createRouterClient(appRouter, { context: createTestContext(db, alice) }),
-      bobClient: createRouterClient(appRouter, { context: createTestContext(db, bob) }),
+      aliceClient: createRouterClient(appRouter, {
+        context: createTestContext(db, alice),
+      }),
+      bobClient: createRouterClient(appRouter, {
+        context: createTestContext(db, bob),
+      }),
     };
   };
 
@@ -68,39 +81,60 @@ describe("goals router", () => {
   it("lists active goals by priority and then creation", async () => {
     const { aliceClient } = await clients();
 
-    await aliceClient.goals.create({ name: "Low", startDate: today(), priority: "low" });
-    await aliceClient.goals.create({ name: "Medium", startDate: today(), priority: "medium" });
-    await aliceClient.goals.create({ name: "High", startDate: today(), priority: "high" });
+    await aliceClient.goals.create({
+      name: "Low",
+      startDate: today(),
+      priority: "low",
+    });
+    await aliceClient.goals.create({
+      name: "Medium",
+      startDate: today(),
+      priority: "medium",
+    });
+    await aliceClient.goals.create({
+      name: "High",
+      startDate: today(),
+      priority: "high",
+    });
 
     const listed = await aliceClient.goals.list();
 
-    expect(listed.active.map((entry) => entry.name)).toEqual(["High", "Medium", "Low"]);
+    expect(listed.active.map((entry) => entry.name)).toEqual([
+      "High",
+      "Medium",
+      "Low",
+    ]);
     expect(listed.archived).toEqual([]);
   });
 
   it("validates names, dates, weekdays, and weekly targets on the server", async () => {
     const { aliceClient } = await clients();
 
-    await expect(aliceClient.goals.create({ ...baseGoal(), name: "" })).rejects.toMatchObject({
+    await expect(
+      aliceClient.goals.create({ ...baseGoal(), name: "" })
+    ).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });
     await expect(
-      aliceClient.goals.create({ ...baseGoal(), name: "x".repeat(41) }),
+      aliceClient.goals.create({ ...baseGoal(), name: "x".repeat(41) })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     await expect(
-      aliceClient.goals.create({ ...baseGoal(), startDate: addDays(today(), -1) }),
+      aliceClient.goals.create({
+        ...baseGoal(),
+        startDate: addDays(today(), -1),
+      })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     await expect(
       aliceClient.goals.create({
         ...baseGoal(),
         cadence: { type: "weekdays", weekdays: [] },
-      }),
+      })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
     await expect(
       aliceClient.goals.create({
         ...baseGoal(),
         cadence: { type: "weekly_target", target: 8 },
-      }),
+      })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
@@ -125,7 +159,9 @@ describe("goals router", () => {
     });
 
     expect(first.scheduleVersions).toHaveLength(2);
-    expect(cadenceOf(first.scheduleVersions, today())).toEqual({ type: "daily" });
+    expect(cadenceOf(first.scheduleVersions, today())).toEqual({
+      type: "daily",
+    });
     expect(cadenceOf(first.scheduleVersions, addDays(today(), 1))).toEqual({
       type: "weekdays",
       weekdays: [1, 3, 5],
@@ -168,7 +204,10 @@ describe("goals router", () => {
 
     expect(raised.scheduleVersions).toHaveLength(2);
     expect(raised.scheduleVersions[1]?.effectiveFrom).toBe(weekStart);
-    expect(raised.scheduleVersions[1]?.cadence).toEqual({ type: "weekly_target", target: 5 });
+    expect(raised.scheduleVersions[1]?.cadence).toEqual({
+      type: "weekly_target",
+      target: 5,
+    });
 
     const reverted = await aliceClient.goals.update({
       id: created.id,
@@ -182,7 +221,10 @@ describe("goals router", () => {
   it("keeps past versions intact and only moves a future goal's initial version", async () => {
     const { aliceClient } = await clients();
     const startDate = addDays(today(), 5);
-    const created = await aliceClient.goals.create({ name: "Reading", startDate });
+    const created = await aliceClient.goals.create({
+      name: "Reading",
+      startDate,
+    });
 
     const changed = await aliceClient.goals.update({
       id: created.id,
@@ -203,7 +245,10 @@ describe("goals router", () => {
     const created = await aliceClient.goals.create(baseGoal());
 
     await expect(
-      aliceClient.goals.update({ id: created.id, startDate: addDays(today(), 1) }),
+      aliceClient.goals.update({
+        id: created.id,
+        startDate: addDays(today(), 1),
+      })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
@@ -228,10 +273,12 @@ describe("goals router", () => {
 
     const afterArchiveDay = await aliceClient.goals.list();
     expect(afterArchiveDay.active).toEqual([]);
-    expect(afterArchiveDay.archived.map((entry) => entry.id)).toContain(created.id);
+    expect(afterArchiveDay.archived.map((entry) => entry.id)).toContain(
+      created.id
+    );
 
     await expect(
-      aliceClient.goals.update({ id: created.id, name: "Read more" }),
+      aliceClient.goals.update({ id: created.id, name: "Read more" })
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     const deleted = await aliceClient.goals.delete({ id: created.id });
@@ -243,20 +290,28 @@ describe("goals router", () => {
     const created = await aliceClient.goals.create(baseGoal());
 
     await expect(
-      aliceClient.goals.delete({ id: created.id, sessionCount: 3 }),
+      aliceClient.goals.delete({ id: created.id, sessionCount: 3 })
     ).rejects.toMatchObject({ code: "CONFLICT" });
 
-    await expect(aliceClient.goals.delete({ id: created.id })).resolves.toEqual({
-      sessionCount: 0,
-    });
+    await expect(aliceClient.goals.delete({ id: created.id })).resolves.toEqual(
+      {
+        sessionCount: 0,
+      }
+    );
 
-    await expect(aliceClient.goals.get({ id: created.id })).rejects.toMatchObject({
+    await expect(
+      aliceClient.goals.get({ id: created.id })
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
-    await expect(aliceClient.goals.delete({ id: created.id })).rejects.toMatchObject({
+    await expect(
+      aliceClient.goals.delete({ id: created.id })
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
-    await expect(requireWritableGoal(db, alice.user.id, created.id)).rejects.toMatchObject({
+    await expect(
+      requireWritableGoal(db, alice.user.id, created.id)
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
 
@@ -267,7 +322,9 @@ describe("goals router", () => {
   it("returns NOT_FOUND for an unknown goal", async () => {
     const { aliceClient } = await clients();
 
-    await expect(aliceClient.goals.get({ id: crypto.randomUUID() })).rejects.toMatchObject({
+    await expect(
+      aliceClient.goals.get({ id: crypto.randomUUID() })
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
   });
@@ -276,17 +333,24 @@ describe("goals router", () => {
     const { aliceClient, bobClient } = await clients();
     const created = await aliceClient.goals.create(baseGoal());
 
-    expect((await bobClient.goals.list()).active).toEqual([]);
-    await expect(bobClient.goals.get({ id: created.id })).rejects.toMatchObject({
+    const bobGoals = await bobClient.goals.list();
+    expect(bobGoals.active).toEqual([]);
+    await expect(bobClient.goals.get({ id: created.id })).rejects.toMatchObject(
+      {
+        code: "NOT_FOUND",
+      }
+    );
+    await expect(
+      bobClient.goals.update({ id: created.id, name: "Bob's goal" })
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      bobClient.goals.archive({ id: created.id })
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
     await expect(
-      bobClient.goals.update({ id: created.id, name: "Bob's goal" }),
-    ).rejects.toMatchObject({ code: "NOT_FOUND" });
-    await expect(bobClient.goals.archive({ id: created.id })).rejects.toMatchObject({
-      code: "NOT_FOUND",
-    });
-    await expect(bobClient.goals.delete({ id: created.id })).rejects.toMatchObject({
+      bobClient.goals.delete({ id: created.id })
+    ).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
 

@@ -1,6 +1,11 @@
 export type { TimeSettings } from "./logical-day";
 export { logicalDate } from "./logical-day";
-export type { Cadence, SchedulePlan, ScheduleVersion, Weekday } from "./schedule";
+export type {
+  Cadence,
+  SchedulePlan,
+  ScheduleVersion,
+  Weekday,
+} from "./schedule";
 export {
   addDays,
   initialSchedule,

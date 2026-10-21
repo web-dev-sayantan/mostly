@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
-  type ScheduleVersion,
   addDays,
   initialSchedule,
   isExpectedOn,
@@ -12,6 +11,7 @@ import {
   resolveSchedule,
   weekdayOf,
 } from "./schedule";
+import type { ScheduleVersion } from "./schedule";
 
 const daily = initialSchedule("2026-10-01", { type: "daily" });
 const weekdays = initialSchedule("2026-10-01", {
@@ -45,33 +45,49 @@ describe("resolveSchedule", () => {
   it("returns the latest version in effect for a logical date", () => {
     const versions: ScheduleVersion[] = [
       daily,
-      { effectiveFrom: "2026-10-21", cadence: { type: "weekly_target", target: 3 } },
+      {
+        effectiveFrom: "2026-10-21",
+        cadence: { type: "weekly_target", target: 3 },
+      },
     ];
 
     expect(resolveSchedule(versions, "2026-09-30")).toBeNull();
     expect(resolveSchedule(versions, "2026-10-01")).toEqual({ type: "daily" });
     expect(resolveSchedule(versions, "2026-10-20")).toEqual({ type: "daily" });
-    expect(resolveSchedule(versions, "2026-10-21")).toEqual({ type: "weekly_target", target: 3 });
+    expect(resolveSchedule(versions, "2026-10-21")).toEqual({
+      type: "weekly_target",
+      target: 3,
+    });
   });
 
   it("resolves daily, weekday, and weekly-target cadences", () => {
     expect(isExpectedOn({ type: "daily" }, "2026-10-20")).toBe(true);
-    expect(isExpectedOn({ type: "weekdays", weekdays: [2, 4] }, "2026-10-20")).toBe(true);
-    expect(isExpectedOn({ type: "weekdays", weekdays: [1, 3] }, "2026-10-20")).toBe(false);
-    expect(isExpectedOn({ type: "weekly_target", target: 4 }, "2026-10-20")).toBe(false);
+    expect(
+      isExpectedOn({ type: "weekdays", weekdays: [2, 4] }, "2026-10-20")
+    ).toBe(true);
+    expect(
+      isExpectedOn({ type: "weekdays", weekdays: [1, 3] }, "2026-10-20")
+    ).toBe(false);
+    expect(
+      isExpectedOn({ type: "weekly_target", target: 4 }, "2026-10-20")
+    ).toBe(false);
     expect(isExpectedOn(null, "2026-10-20")).toBe(false);
   });
 });
 
 describe("normalizeCadence", () => {
   it("normalizes all seven weekdays to daily", () => {
-    expect(normalizeCadence({ type: "weekdays", weekdays: [1, 2, 3, 4, 5, 6, 7] })).toEqual({
+    expect(
+      normalizeCadence({ type: "weekdays", weekdays: [1, 2, 3, 4, 5, 6, 7] })
+    ).toEqual({
       type: "daily",
     });
   });
 
   it("sorts and deduplicates weekdays", () => {
-    expect(normalizeCadence({ type: "weekdays", weekdays: [5, 1, 5, 3] })).toEqual({
+    expect(
+      normalizeCadence({ type: "weekdays", weekdays: [5, 1, 5, 3] })
+    ).toEqual({
       type: "weekdays",
       weekdays: [1, 3, 5],
     });
@@ -116,7 +132,10 @@ describe("planScheduleChange", () => {
       startDate: "2026-10-01",
     });
 
-    expect(plan.pending).toEqual({ effectiveFrom: "2026-10-21", cadence: { type: "daily" } });
+    expect(plan.pending).toEqual({
+      effectiveFrom: "2026-10-21",
+      cadence: { type: "daily" },
+    });
   });
 
   it("makes any weekly-target change effective next week", () => {

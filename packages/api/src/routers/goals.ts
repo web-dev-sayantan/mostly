@@ -1,13 +1,12 @@
+import type { Database } from "@mostly/db";
+import { goal, goalScheduleVersion } from "@mostly/db/schema/goals";
 import type { Cadence, Weekday } from "@mostly/domain";
 import {
   initialSchedule,
   isIsoDate,
   normalizeCadence,
   planScheduleChange,
-  resolveSchedule,
 } from "@mostly/domain";
-import type { Database } from "@mostly/db";
-import { goal, goalScheduleVersion } from "@mostly/db/schema/goals";
 import { ORPCError } from "@orpc/server";
 import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
@@ -54,7 +53,7 @@ const currentDate = () => new Date().toISOString().slice(0, 10);
 
 const dateSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .regex(/^\d{4}-\d{2}-\d{2}$/u)
   .refine(isIsoDate, "Enter a valid date");
 
 const prioritySchema = z.enum(["high", "medium", "low"]);
@@ -75,7 +74,7 @@ const emojiSchema = z.string().trim().max(8).nullish();
 const colorSchema = z
   .string()
   .trim()
-  .regex(/^#[0-9a-f]{6}$/i)
+  .regex(/^#[0-9a-f]{6}$/iu)
   .nullish();
 
 const idSchema = z.object({ id: z.string().min(1) });
@@ -109,7 +108,7 @@ const scheduleColumns = (cadence: Cadence) => ({
 const toDto = (
   row: GoalRow,
   versions: ScheduleRow[],
-  sessionCount: number,
+  sessionCount: number
 ): GoalDto => ({
   id: row.id,
   name: row.name,
@@ -128,7 +127,7 @@ const toDto = (
   })),
 });
 
-const loadVersions = async (db: Database, goalId: string) =>
+const loadVersions = (db: Database, goalId: string) =>
   db
     .select()
     .from(goalScheduleVersion)
@@ -136,10 +135,15 @@ const loadVersions = async (db: Database, goalId: string) =>
     .orderBy(asc(goalScheduleVersion.effectiveFrom));
 
 const loadDto = async (db: Database, row: GoalRow): Promise<GoalDto> =>
-  toDto(row, await loadVersions(db, row.id), await countGoalSessions(db, row.id));
+  toDto(
+    row,
+    await loadVersions(db, row.id),
+    await countGoalSessions(db, row.id)
+  );
 
 const byPriorityThenCreation = (a: GoalDto, b: GoalDto) =>
-  PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || a.createdAt.localeCompare(b.createdAt);
+  PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+  a.createdAt.localeCompare(b.createdAt);
 
 const requireActiveForEdit = (row: GoalRow, today: string) => {
   if (row.archivedOn && row.archivedOn < today) {
@@ -149,7 +153,7 @@ const requireActiveForEdit = (row: GoalRow, today: string) => {
 
 export const goalsRouter = {
   list: protectedProcedure.handler(async ({ context }) => {
-    const userId = context.session.user.id;
+    const { id: userId } = context.session.user;
     const rows = await context.db
       .select()
       .from(goal)
@@ -164,8 +168,8 @@ export const goalsRouter = {
             .where(
               inArray(
                 goalScheduleVersion.goalId,
-                rows.map((row) => row.id),
-              ),
+                rows.map((row) => row.id)
+              )
             )
             .orderBy(asc(goalScheduleVersion.effectiveFrom));
 
@@ -177,37 +181,41 @@ export const goalsRouter = {
     }
 
     const today = currentDate();
-    const active: GoalDto[] = [];
-    const archived: GoalDto[] = [];
-
-    for (const row of rows) {
-      const dto = toDto(
-        row,
-        versionsByGoal.get(row.id) ?? [],
-        await countGoalSessions(context.db, row.id),
-      );
-      if (dto.archivedOn && dto.archivedOn < today) {
-        archived.push(dto);
-      } else {
-        active.push(dto);
-      }
-    }
+    const dtos = await Promise.all(
+      rows.map(async (row) =>
+        toDto(
+          row,
+          versionsByGoal.get(row.id) ?? [],
+          await countGoalSessions(context.db, row.id)
+        )
+      )
+    );
 
     return {
-      active: active.sort(byPriorityThenCreation),
-      archived: archived.sort(byPriorityThenCreation),
+      active: dtos
+        .filter((dto) => !dto.archivedOn || dto.archivedOn >= today)
+        .toSorted(byPriorityThenCreation),
+      archived: dtos
+        .filter((dto) => dto.archivedOn && dto.archivedOn < today)
+        .toSorted(byPriorityThenCreation),
     };
   }),
 
-  get: protectedProcedure.input(idSchema).handler(async ({ context, input }) => {
-    const row = await findOwnedGoal(context.db, context.session.user.id, input.id);
+  get: protectedProcedure
+    .input(idSchema)
+    .handler(async ({ context, input }) => {
+      const row = await findOwnedGoal(
+        context.db,
+        context.session.user.id,
+        input.id
+      );
 
-    if (!row) {
-      throw new ORPCError("NOT_FOUND");
-    }
+      if (!row) {
+        throw new ORPCError("NOT_FOUND");
+      }
 
-    return loadDto(context.db, row);
-  }),
+      return loadDto(context.db, row);
+    }),
 
   create: protectedProcedure
     .input(
@@ -218,13 +226,15 @@ export const goalsRouter = {
         priority: prioritySchema.default("medium"),
         cadence: cadenceSchema.default({ type: "daily" }),
         startDate: dateSchema,
-      }),
+      })
     )
     .handler(async ({ context, input }) => {
       const today = currentDate();
 
       if (input.startDate < today) {
-        throw new ORPCError("BAD_REQUEST", { message: "Start date can't be in the past." });
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Start date can't be in the past.",
+        });
       }
 
       const cadence = normalizeCadence(toDomainCadence(input.cadence));
@@ -254,7 +264,11 @@ export const goalsRouter = {
         });
       });
 
-      const row = await requireWritableGoal(context.db, context.session.user.id, id);
+      const row = await requireWritableGoal(
+        context.db,
+        context.session.user.id,
+        id
+      );
       return loadDto(context.db, row);
     }),
 
@@ -267,33 +281,39 @@ export const goalsRouter = {
         priority: prioritySchema.optional(),
         cadence: cadenceSchema.optional(),
         startDate: dateSchema.optional(),
-      }),
+      })
     )
     .handler(async ({ context, input }) => {
-      const current = await requireWritableGoal(
-        context.db,
-        context.session.user.id,
-        input.id,
-      );
+      const { id: userId } = context.session.user;
+      const current = await requireWritableGoal(context.db, userId, input.id);
       const today = currentDate();
       requireActiveForEdit(current, today);
 
-      let startDate = current.startDate;
-      if (input.startDate !== undefined && input.startDate !== current.startDate) {
-        if (input.startDate < today) {
-          throw new ORPCError("BAD_REQUEST", { message: "Start date can't be in the past." });
+      let { startDate } = current;
+      const { startDate: requestedStartDate } = input;
+      if (
+        requestedStartDate !== undefined &&
+        requestedStartDate !== current.startDate
+      ) {
+        if (requestedStartDate < today) {
+          throw new ORPCError("BAD_REQUEST", {
+            message: "Start date can't be in the past.",
+          });
         }
         if (current.startDate <= today) {
           throw new ORPCError("BAD_REQUEST", {
             message: "Start date can't change after a goal has started.",
           });
         }
-        startDate = input.startDate;
+        startDate = requestedStartDate;
       }
 
       const startDateChanged = startDate !== current.startDate;
       const now = new Date();
-      const changes: Partial<typeof goal.$inferInsert> = { startDate, updatedAt: now };
+      const changes: Partial<typeof goal.$inferInsert> = {
+        startDate,
+        updatedAt: now,
+      };
 
       if (input.name !== undefined) {
         changes.name = input.name;
@@ -310,10 +330,11 @@ export const goalsRouter = {
 
       await context.db.transaction(async (tx) => {
         if (input.cadence !== undefined) {
-          const existing = (await tx.select().from(goalScheduleVersion).where(eq(
-            goalScheduleVersion.goalId,
-            current.id,
-          ))).map((row) => ({
+          const versionRows = await tx
+            .select()
+            .from(goalScheduleVersion)
+            .where(eq(goalScheduleVersion.goalId, current.id));
+          const existing = versionRows.map((row) => ({
             effectiveFrom: row.effectiveFrom,
             cadence: toCadence(row),
           }));
@@ -324,20 +345,14 @@ export const goalsRouter = {
             startDate,
           });
 
-          if (startDate > today) {
-            await tx
-              .delete(goalScheduleVersion)
-              .where(eq(goalScheduleVersion.goalId, current.id));
-          } else {
-            await tx
-              .delete(goalScheduleVersion)
-              .where(
-                and(
+          const pendingOnly =
+            startDate > today
+              ? eq(goalScheduleVersion.goalId, current.id)
+              : and(
                   eq(goalScheduleVersion.goalId, current.id),
-                  gt(goalScheduleVersion.effectiveFrom, today),
-                ),
-              );
-          }
+                  gt(goalScheduleVersion.effectiveFrom, today)
+                );
+          await tx.delete(goalScheduleVersion).where(pendingOnly);
 
           if (plan.pending) {
             await tx.insert(goalScheduleVersion).values({
@@ -358,41 +373,67 @@ export const goalsRouter = {
         await tx
           .update(goal)
           .set(changes)
-          .where(and(eq(goal.id, current.id), eq(goal.userId, context.session.user.id)));
+          .where(
+            and(
+              eq(goal.id, current.id),
+              eq(goal.userId, context.session.user.id)
+            )
+          );
       });
 
-      const row = await requireWritableGoal(context.db, context.session.user.id, current.id);
+      const row = await requireWritableGoal(
+        context.db,
+        context.session.user.id,
+        current.id
+      );
       return loadDto(context.db, row);
     }),
 
-  archive: protectedProcedure.input(idSchema).handler(async ({ context, input }) => {
-    const current = await requireWritableGoal(context.db, context.session.user.id, input.id);
-
-    if (current.archivedOn) {
-      return loadDto(context.db, current);
-    }
-
-    const now = new Date();
-    await context.db
-      .update(goal)
-      .set({ archivedOn: currentDate(), updatedAt: now })
-      .where(and(eq(goal.id, current.id), eq(goal.userId, context.session.user.id)));
-
-    const row = await requireWritableGoal(context.db, context.session.user.id, current.id);
-    return loadDto(context.db, row);
-  }),
-
-  delete: protectedProcedure
-    .input(idSchema.extend({ sessionCount: z.number().int().min(0).optional() }))
+  archive: protectedProcedure
+    .input(idSchema)
     .handler(async ({ context, input }) => {
       const current = await requireWritableGoal(
         context.db,
         context.session.user.id,
-        input.id,
+        input.id
+      );
+
+      if (current.archivedOn) {
+        return loadDto(context.db, current);
+      }
+
+      const now = new Date();
+      await context.db
+        .update(goal)
+        .set({ archivedOn: currentDate(), updatedAt: now })
+        .where(
+          and(eq(goal.id, current.id), eq(goal.userId, context.session.user.id))
+        );
+
+      const row = await requireWritableGoal(
+        context.db,
+        context.session.user.id,
+        current.id
+      );
+      return loadDto(context.db, row);
+    }),
+
+  delete: protectedProcedure
+    .input(
+      idSchema.extend({ sessionCount: z.number().int().min(0).optional() })
+    )
+    .handler(async ({ context, input }) => {
+      const current = await requireWritableGoal(
+        context.db,
+        context.session.user.id,
+        input.id
       );
       const sessionCount = await countGoalSessions(context.db, current.id);
 
-      if (input.sessionCount !== undefined && input.sessionCount !== sessionCount) {
+      if (
+        input.sessionCount !== undefined &&
+        input.sessionCount !== sessionCount
+      ) {
         throw new ORPCError("CONFLICT", {
           message: "The session count changed. Review the goal again.",
         });
@@ -403,12 +444,10 @@ export const goalsRouter = {
       await context.db
         .update(goal)
         .set({ deletedAt: now, updatedAt: now })
-        .where(and(eq(goal.id, current.id), eq(goal.userId, context.session.user.id)));
+        .where(
+          and(eq(goal.id, current.id), eq(goal.userId, context.session.user.id))
+        );
 
       return { sessionCount };
     }),
 };
-
-/** The cadence in effect for a goal on a date; shared with later stats tickets. */
-export const cadenceOn = (versions: GoalScheduleVersionDto[], date: string) =>
-  resolveSchedule(versions, date);

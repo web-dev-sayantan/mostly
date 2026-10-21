@@ -1,5 +1,5 @@
 const MS_PER_DAY = 86_400_000;
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -28,7 +28,9 @@ export const isIsoDate = (value: string): boolean => {
 };
 
 export const addDays = (date: string, days: number): string =>
-  new Date(Date.parse(`${date}T00:00:00Z`) + days * MS_PER_DAY).toISOString().slice(0, 10);
+  new Date(Date.parse(`${date}T00:00:00Z`) + days * MS_PER_DAY)
+    .toISOString()
+    .slice(0, 10);
 
 /** ISO weekday: 1 = Monday … 7 = Sunday. */
 export const weekdayOf = (date: string): Weekday => {
@@ -41,8 +43,12 @@ export const normalizeCadence = (cadence: Cadence): Cadence => {
     return cadence;
   }
 
-  const weekdays = [...new Set(cadence.weekdays)].sort((a, b) => a - b) as Weekday[];
-  return weekdays.length === 7 ? { type: "daily" } : { type: "weekdays", weekdays };
+  const weekdays = [...new Set(cadence.weekdays)].toSorted(
+    (a, b) => a - b
+  ) as Weekday[];
+  return weekdays.length === 7
+    ? { type: "daily" }
+    : { type: "weekdays", weekdays };
 };
 
 export const sameCadence = (a: Cadence, b: Cadence): boolean => {
@@ -64,7 +70,7 @@ export const sameCadence = (a: Cadence, b: Cadence): boolean => {
 /** The version in effect on a date: the latest effective_from on or before it. */
 export const resolveSchedule = (
   versions: readonly ScheduleVersion[],
-  date: string,
+  date: string
 ): Cadence | null => {
   let inEffect: ScheduleVersion | null = null;
 
@@ -81,7 +87,10 @@ export const resolveSchedule = (
 };
 
 /** Daily and weekday goals have daily expectations. Weekly targets do not. */
-export const isExpectedOn = (cadence: Cadence | null, date: string): boolean => {
+export const isExpectedOn = (
+  cadence: Cadence | null,
+  date: string
+): boolean => {
   if (cadence?.type === "daily") {
     return true;
   }
@@ -92,12 +101,18 @@ export const isExpectedOn = (cadence: Cadence | null, date: string): boolean => 
 };
 
 /** The first day of the next week, strictly after the given date. */
-export const nextWeekStart = (date: string, weekStartsOn: Weekday = 1): string => {
+export const nextWeekStart = (
+  date: string,
+  weekStartsOn: Weekday = 1
+): string => {
   const daysUntil = (weekStartsOn - weekdayOf(date) + 7) % 7;
   return addDays(date, daysUntil === 0 ? 7 : daysUntil);
 };
 
-export const initialSchedule = (startDate: string, cadence: Cadence): ScheduleVersion => ({
+export const initialSchedule = (
+  startDate: string,
+  cadence: Cadence
+): ScheduleVersion => ({
   effectiveFrom: startDate,
   cadence: normalizeCadence(cadence),
 });
@@ -120,7 +135,9 @@ export const planScheduleChange = ({
   weekStartsOn?: Weekday;
 }): SchedulePlan => {
   const normalized = normalizeCadence(cadence);
-  const sorted = [...versions].sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+  const sorted = versions.toSorted((a, b) =>
+    a.effectiveFrom.localeCompare(b.effectiveFrom)
+  );
   const current = sorted.filter((version) => version.effectiveFrom <= today);
 
   if (current.length === 0) {
@@ -133,13 +150,17 @@ export const planScheduleChange = ({
     };
   }
 
-  const inEffect = current[current.length - 1] as ScheduleVersion;
+  const inEffect = current.at(-1) as ScheduleVersion;
   if (sameCadence(inEffect.cadence, normalized)) {
     return { current, pending: null };
   }
 
-  const unitChanges = inEffect.cadence.type === "weekly_target" || normalized.type === "weekly_target";
-  const effectiveFrom = unitChanges ? nextWeekStart(today, weekStartsOn) : addDays(today, 1);
+  const unitChanges =
+    inEffect.cadence.type === "weekly_target" ||
+    normalized.type === "weekly_target";
+  const effectiveFrom = unitChanges
+    ? nextWeekStart(today, weekStartsOn)
+    : addDays(today, 1);
 
   return { current, pending: { effectiveFrom, cadence: normalized } };
 };
