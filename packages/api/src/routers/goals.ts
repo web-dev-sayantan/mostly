@@ -18,6 +18,7 @@ import {
   tombstoneGoalSessions,
 } from "../goal-access";
 import { protectedProcedure } from "../procedures";
+import { loadUserClock } from "../user-clock";
 
 type GoalRow = typeof goal.$inferSelect;
 type ScheduleRow = typeof goalScheduleVersion.$inferSelect;
@@ -45,11 +46,7 @@ export interface GoalDto {
 
 const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
-/**
- * shortcut: UTC stands in for the user's logical day until ticket 4 lands the
- * settings-backed date, then this reads the user's current settings.
- */
-const currentDate = () => new Date().toISOString().slice(0, 10);
+const isWeekday = (value: number): value is Weekday => value >= 1 && value <= 7;
 
 const dateSchema = z
   .string()
@@ -183,7 +180,7 @@ export const goalsRouter = {
       versionsByGoal.set(version.goalId, list);
     }
 
-    const today = currentDate();
+    const { today } = await loadUserClock(context.db, userId, context.now());
     const dtos = await Promise.all(
       rows.map(async (row) =>
         toDto(
@@ -232,7 +229,11 @@ export const goalsRouter = {
       })
     )
     .handler(async ({ context, input }) => {
-      const today = currentDate();
+      const { today } = await loadUserClock(
+        context.db,
+        context.session.user.id,
+        context.now()
+      );
 
       if (input.startDate < today) {
         throw new ORPCError("BAD_REQUEST", {
@@ -289,7 +290,8 @@ export const goalsRouter = {
     .handler(async ({ context, input }) => {
       const { id: userId } = context.session.user;
       const current = await requireWritableGoal(context.db, userId, input.id);
-      const today = currentDate();
+      const clock = await loadUserClock(context.db, userId, context.now());
+      const { today } = clock;
       requireActiveForEdit(current, today);
 
       let { startDate } = current;
@@ -346,6 +348,9 @@ export const goalsRouter = {
             today,
             cadence: toDomainCadence(input.cadence),
             startDate,
+            weekStartsOn: isWeekday(clock.weekStartsOn)
+              ? clock.weekStartsOn
+              : 1,
           });
 
           const pendingOnly =
@@ -405,10 +410,15 @@ export const goalsRouter = {
         return loadGoalDto(context.db, current);
       }
 
+      const clock = await loadUserClock(
+        context.db,
+        context.session.user.id,
+        context.now()
+      );
       const now = new Date();
       await context.db
         .update(goal)
-        .set({ archivedOn: currentDate(), updatedAt: now })
+        .set({ archivedOn: clock.today, updatedAt: now })
         .where(
           and(eq(goal.id, current.id), eq(goal.userId, context.session.user.id))
         );

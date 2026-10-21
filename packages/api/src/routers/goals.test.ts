@@ -1,7 +1,13 @@
 import type { Database } from "@mostly/db";
 import { goal } from "@mostly/db/schema/goals";
+import { userSettingVersion } from "@mostly/db/schema/settings";
 import { createTestDb } from "@mostly/db/testing";
-import { addDays, nextWeekStart, resolveSchedule } from "@mostly/domain";
+import {
+  addDays,
+  logicalDate,
+  nextWeekStart,
+  resolveSchedule,
+} from "@mostly/domain";
 import type { Cadence } from "@mostly/domain";
 import { createRouterClient } from "@orpc/server";
 import { eq } from "drizzle-orm";
@@ -11,7 +17,9 @@ import { requireWritableGoal } from "../goal-access";
 import { createTestContext, createTestUser } from "../testing";
 import { appRouter } from "./index";
 
-const today = () => new Date().toISOString().slice(0, 10);
+// The router defaults a user without settings to UTC with a 4 AM rollover.
+const today = () =>
+  logicalDate(new Date(), { timeZone: "UTC", rolloverHour: 4 });
 
 const baseGoal = () => ({
   name: "Reading",
@@ -184,6 +192,43 @@ describe("goals router", () => {
     expect(cadenceOf(second.scheduleVersions, addDays(today(), 1))).toEqual({
       type: "weekdays",
       weekdays: [2, 4],
+    });
+  });
+
+  it("aligns a weekly-target change to the user's week start", async () => {
+    const { alice } = await clients();
+    await db.insert(userSettingVersion).values({
+      id: crypto.randomUUID(),
+      userId: alice.user.id,
+      effectiveFrom: "2026-10-01",
+      timeZone: "UTC",
+      weekStartsOn: 7,
+      dayRolloverHour: 4,
+      createdAt: new Date("2026-10-01T00:00:00.000Z"),
+    });
+    const fixedClient = createRouterClient(appRouter, {
+      context: createTestContext(
+        db,
+        alice,
+        () => new Date("2026-10-21T12:00:00.000Z")
+      ),
+    });
+    const created = await fixedClient.goals.create({
+      name: "Reading",
+      startDate: "2026-10-21",
+    });
+
+    const weekly = await fixedClient.goals.update({
+      id: created.id,
+      cadence: { type: "weekly_target", target: 3 },
+    });
+
+    expect(weekly.scheduleVersions.at(-1)).toMatchObject({
+      effectiveFrom: "2026-10-25",
+      cadence: { type: "weekly_target", target: 3 },
+    });
+    expect(cadenceOf(weekly.scheduleVersions, "2026-10-24")).toEqual({
+      type: "daily",
     });
   });
 
