@@ -139,6 +139,7 @@ const toSession = (row: SessionRow) => ({
   mood: row.mood,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
+  deletedAt: row.deletedAt?.toISOString() ?? null,
 });
 
 export const accountRouter = {

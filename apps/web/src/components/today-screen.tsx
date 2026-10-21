@@ -8,6 +8,8 @@ import { isSessionReadOnly } from "@/lib/session-details";
 import type { TodayView } from "@/lib/today";
 import { dailyProgressPercent, todayProgressCopy } from "@/lib/today";
 
+import { NotScheduledToday } from "./not-scheduled-today";
+import { PastSevenDays } from "./past-seven-days";
 import { SessionDetails } from "./session-details";
 import { TodayGoalRow, WeeklyGoalRow } from "./today-goal-row";
 import { TodayHeader } from "./today-header";
@@ -169,6 +171,11 @@ export const TodayScreen = ({
           </>
         )}
       </section>
+
+      <div className="mt-8 grid gap-2">
+        <PastSevenDays today={today} />
+        <NotScheduledToday date={today} />
+      </div>
 
       <TodaySyncFooter />
     </div>

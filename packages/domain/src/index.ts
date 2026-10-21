@@ -4,7 +4,7 @@ export type {
   DerivedOutcomes,
   ExportGoalInput,
   ExportSessionInput,
-  WeeklyOutcome,
+  WeeklyOutcome as ExportWeeklyOutcome,
 } from "./export";
 export { deriveOutcomes, EXPORT_SCHEMA_VERSION } from "./export";
 export {

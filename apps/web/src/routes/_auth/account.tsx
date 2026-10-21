@@ -9,6 +9,7 @@ import { AccountSection } from "@/components/account-section";
 import { useTheme } from "@/components/theme-provider";
 import { APP_VERSION, SOURCE_URL } from "@/lib/app-info";
 import { authClient } from "@/lib/auth-client";
+import { IosInstallInstructions } from "@/lib/install/install-prompt";
 import {
   detectedTimeZone,
   formatLogicalDate,
@@ -90,9 +91,7 @@ const Install = () => (
       </li>
       <li>
         <span className="font-medium">iPhone and iPad</span>
-        <span className="text-muted-foreground block">
-          Open Mostly in Safari, tap Share, then Add to Home Screen.
-        </span>
+        <IosInstallInstructions className="text-muted-foreground mt-1" />
       </li>
       <li>
         <span className="font-medium">Desktop</span>
