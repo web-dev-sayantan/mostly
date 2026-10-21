@@ -100,7 +100,7 @@ describe("sessionsRouter", () => {
         note: "Read a chapter",
       }),
     ]);
-    expect(second.applied).toEqual([]);
+    expect(second.applied).toEqual([op.opId]);
     expect(second.conflicts).toEqual([]);
     expect(second.winners).toEqual([expect.objectContaining({ id: op.id })]);
 
@@ -110,6 +110,55 @@ describe("sessionsRouter", () => {
       .where(eq(session.goalId, reading.id));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.deletedAt).toBeNull();
+  });
+
+  it("settles a replayed tombstone without creating another row", async () => {
+    const { alice, aliceClient } = await clients();
+    const reading = await createGoal(db, alice.user.id);
+    await aliceClient.sessions.sync({
+      ops: [sessionOp(reading.id, { updatedAt: 1000 })],
+    });
+    const deletion = sessionOp(reading.id, {
+      deleted: true,
+      minutes: null,
+      note: null,
+      mood: null,
+      updatedAt: 2000,
+    });
+
+    await aliceClient.sessions.sync({ ops: [deletion] });
+    const replay = await aliceClient.sessions.sync({ ops: [deletion] });
+
+    expect(replay.applied).toEqual([deletion.opId]);
+    expect(replay.conflicts).toEqual([]);
+    const rows = await db
+      .select()
+      .from(session)
+      .where(eq(session.goalId, reading.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.deletedAt?.getTime()).toBe(2000);
+  });
+
+  it("keeps one live row when two devices create the same goal day", async () => {
+    const { alice, aliceClient } = await clients();
+    const reading = await createGoal(db, alice.user.id);
+
+    const result = await aliceClient.sessions.sync({
+      ops: [
+        sessionOp(reading.id, { id: "device-a", note: "A", updatedAt: 1000 }),
+        sessionOp(reading.id, { id: "device-b", note: "B", updatedAt: 1000 }),
+      ],
+    });
+
+    expect(result.winners).toHaveLength(1);
+    const rows = await db
+      .select()
+      .from(session)
+      .where(eq(session.goalId, reading.id));
+    expect(rows).toHaveLength(1);
+    await expect(
+      aliceClient.sessions.list({ from: "2026-10-01", to: "2026-10-31" })
+    ).resolves.toHaveLength(1);
   });
 
   it("resolves last-write-wins and returns the losing edit as a conflict", async () => {

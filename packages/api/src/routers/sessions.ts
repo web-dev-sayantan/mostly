@@ -208,6 +208,8 @@ export const sessionsRouter = {
             );
             winners.set(key, resolution.winner);
           } else {
+            // Already at this value: settle the replay so the client clears it.
+            applied.push(op.opId);
             winners.set(key, resolution.winner);
           }
         }
