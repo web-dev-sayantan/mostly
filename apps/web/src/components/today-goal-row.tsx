@@ -4,7 +4,11 @@ import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cadenceSummary } from "@/lib/goals";
-import { describeSession, detailsSummary } from "@/lib/session-details";
+import {
+  checkButtonLabel,
+  describeSession,
+  detailsSummary,
+} from "@/lib/session-details";
 import type { TodayGoal, WeeklyGoal } from "@/lib/today";
 import {
   hasSessionDetails,
@@ -63,7 +67,7 @@ const CheckTarget = ({
   description,
   onMarkDone,
   onOpenDetails,
-  registerTrigger,
+  onRegisterAction,
 }: {
   goal: GoalDto;
   done: boolean;
@@ -72,26 +76,23 @@ const CheckTarget = ({
   description?: string;
   onMarkDone: (goal: GoalDto) => void;
   onOpenDetails?: (goalId: string) => void;
-  registerTrigger?: (goalId: string, node: HTMLButtonElement | null) => void;
+  onRegisterAction?: (goalId: string, node: HTMLButtonElement | null) => void;
 }) => {
   const canEditDetails = done && detailsSupported && onOpenDetails;
   let onClick: (() => void) | undefined = () => onMarkDone(goal);
-  let label = `Mark ${goal.name} done`;
   if (done) {
     onClick = undefined;
-    label = `${goal.name} done.`;
     if (canEditDetails) {
       onClick = () => onOpenDetails(goal.id);
-      label = `${goal.name} done. Edit details.`;
     }
   }
 
   return (
     <button
-      ref={(node) => registerTrigger?.(goal.id, node)}
+      ref={(node) => onRegisterAction?.(goal.id, node)}
       type="button"
       onClick={onClick}
-      aria-label={label}
+      aria-label={checkButtonLabel(goal.name, done, Boolean(canEditDetails))}
       aria-describedby={
         done && description ? `today-description-${goal.id}` : undefined
       }
@@ -166,7 +167,7 @@ export interface TodayRowProps {
   onMarkDone: (goal: GoalDto) => void;
   onOpenDetails?: (goalId: string) => void;
   onUndo: () => void;
-  registerTrigger?: (goalId: string, node: HTMLButtonElement | null) => void;
+  onRegisterAction?: (goalId: string, node: HTMLButtonElement | null) => void;
 }
 
 export const TodayGoalRow = ({
@@ -177,7 +178,7 @@ export const TodayGoalRow = ({
   onMarkDone,
   onOpenDetails,
   onUndo,
-  registerTrigger,
+  onRegisterAction,
 }: TodayRowProps & { entry: TodayGoal }) => {
   const { goal, cadence, session } = entry;
   const done = session !== null;
@@ -245,7 +246,7 @@ export const TodayGoalRow = ({
             description={description}
             onMarkDone={onMarkDone}
             onOpenDetails={onOpenDetails}
-            registerTrigger={registerTrigger}
+            onRegisterAction={onRegisterAction}
           />
         </div>
       </div>
@@ -288,7 +289,7 @@ export const WeeklyGoalRow = ({
   onMarkDone,
   onOpenDetails,
   onUndo,
-  registerTrigger,
+  onRegisterAction,
 }: TodayRowProps & { entry: WeeklyGoal }) => {
   const { goal, session } = entry;
   const done = session !== null;
@@ -361,6 +362,7 @@ export const WeeklyGoalRow = ({
           ) : null}
           {!done && entry.met ? (
             <button
+              ref={(node) => onRegisterAction?.(goal.id, node)}
               type="button"
               onClick={() => onMarkDone(goal)}
               aria-label={`Log another session for ${goal.name}`}
@@ -377,7 +379,7 @@ export const WeeklyGoalRow = ({
               description={description}
               onMarkDone={onMarkDone}
               onOpenDetails={onOpenDetails}
-              registerTrigger={registerTrigger}
+              onRegisterAction={onRegisterAction}
             />
           )}
         </div>

@@ -131,7 +131,7 @@ export const SessionDetailsEditor = ({
               aria-pressed={mood === value}
               onClick={() => setMood(mood === value ? null : value)}
               className={cn(
-                "border-border hover:bg-muted min-h-11 rounded-full border px-4 text-sm",
+                "border-border hover:bg-muted focus-visible:ring-ring/50 min-h-11 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
                 mood === value && "bg-accent border-foreground/40"
               )}
             >

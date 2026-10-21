@@ -4,7 +4,7 @@ import { cn } from "@mostly/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { GoalEditor } from "@/components/goal-editor";
 import {
@@ -36,7 +36,7 @@ const GoalRow = ({
   goal: GoalDto;
   today: string;
   online: boolean;
-  onEdit: (goal: GoalDto) => void;
+  onEdit: (goal: GoalDto, trigger: HTMLButtonElement) => void;
 }) => {
   const cadence = cadenceSummary(effectiveCadence(goal, today));
   const note = timingNote(goal, today);
@@ -87,7 +87,7 @@ const GoalRow = ({
       <Button
         type="button"
         variant="ghost"
-        onClick={() => onEdit(goal)}
+        onClick={(event) => onEdit(goal, event.currentTarget)}
         disabled={!online}
         aria-label={`${archived ? "Manage" : "Edit"} ${goal.name}`}
         className="mr-1 min-h-11 shrink-0 rounded-full px-3 text-sm"
@@ -101,9 +101,26 @@ const GoalRow = ({
 const GoalsPage = () => {
   const [filter, setFilter] = useState<Filter>("active");
   const [editor, setEditor] = useState<EditorState>(null);
+  const editorTrigger = useRef<HTMLButtonElement | null>(null);
+  const newGoalTrigger = useRef<HTMLButtonElement | null>(null);
   const online = useOnline();
   const today = localToday();
   const goalsQuery = useQuery(orpc.goals.list.queryOptions());
+
+  const openEditor = (goal: GoalDto | null, trigger: HTMLButtonElement) => {
+    editorTrigger.current = trigger;
+    setEditor({ goal });
+  };
+
+  const closeEditor = () => {
+    setEditor(null);
+    requestAnimationFrame(() => {
+      const target = editorTrigger.current?.isConnected
+        ? editorTrigger.current
+        : newGoalTrigger.current;
+      target?.focus();
+    });
+  };
 
   const all = [
     ...(goalsQuery.data?.active ?? []),
@@ -125,8 +142,9 @@ const GoalsPage = () => {
         <h1 className="text-[28px] leading-tight font-medium">Goals</h1>
         {editor ? null : (
           <Button
+            ref={newGoalTrigger}
             type="button"
-            onClick={() => setEditor({ goal: null })}
+            onClick={(event) => openEditor(null, event.currentTarget)}
             disabled={!online}
             className="min-h-11 rounded-full px-4 text-sm"
           >
@@ -146,8 +164,8 @@ const GoalsPage = () => {
         <GoalEditor
           key={editor.goal?.id ?? "new"}
           goal={editor.goal}
-          onClose={() => setEditor(null)}
-          onDone={() => setEditor(null)}
+          onClose={closeEditor}
+          onDone={closeEditor}
         />
       ) : (
         <>
@@ -165,7 +183,7 @@ const GoalsPage = () => {
                 aria-pressed={filter === option.value}
                 onClick={() => setFilter(option.value)}
                 className={cn(
-                  "min-h-11 rounded-full px-4 text-sm",
+                  "focus-visible:ring-ring/50 min-h-11 rounded-full px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
                   filter === option.value && "bg-accent text-accent-foreground"
                 )}
               >
@@ -210,7 +228,7 @@ const GoalsPage = () => {
                   goal={goal}
                   today={today}
                   online={online}
-                  onEdit={(entry) => setEditor({ goal: entry })}
+                  onEdit={(entry, trigger) => openEditor(entry, trigger)}
                 />
               ))}
             </ul>

@@ -13,6 +13,7 @@ import {
   markSessionDone,
   useLocalSessions,
 } from "@/lib/offline";
+import { needsOnboarding } from "@/lib/onboarding";
 import { detectedTimeZone } from "@/lib/time";
 import { buildTodayView, resolveTodaySettings } from "@/lib/today";
 import type { TodayCache } from "@/lib/today-cache";
@@ -32,14 +33,16 @@ const TodayPage = () => {
   const [announcement, setAnnouncement] = useState("");
   const [openGoalId, setOpenGoalId] = useState<string | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const triggers = useRef(new Map<string, HTMLButtonElement>());
+  const detailsTrigger = useRef<HTMLElement | null>(null);
+  const detailsGoalId = useRef<string | null>(null);
+  const checks = useRef(new Map<string, HTMLButtonElement>());
   const sessions = useLocalSessions();
-  const registerTrigger = useCallback(
+  const registerAction = useCallback(
     (goalId: string, node: HTMLButtonElement | null) => {
       if (node) {
-        triggers.current.set(goalId, node);
+        checks.current.set(goalId, node);
       } else {
-        triggers.current.delete(goalId);
+        checks.current.delete(goalId);
       }
     },
     []
@@ -192,49 +195,60 @@ const TodayPage = () => {
       setUndo(null);
     }, UNDO_MS);
     setAnnouncement(`${goal.name} done. Undo available for 5 seconds.`);
+    requestAnimationFrame(() => checks.current.get(goal.id)?.focus());
   };
 
   const handleUndo = () => {
     if (!undo) {
       return;
     }
+    const { goalId, logicalDate, name } = undo;
     const session = sessions.find(
-      (entry) =>
-        entry.goalId === undo.goalId && entry.logicalDate === undo.logicalDate
+      (entry) => entry.goalId === goalId && entry.logicalDate === logicalDate
     );
     if (session) {
       deleteLocalSession(session.id);
     }
     clearUndo();
-    setAnnouncement(`${undo.name} undone.`);
+    setAnnouncement(`${name} undone.`);
+    requestAnimationFrame(() => checks.current.get(goalId)?.focus());
   };
 
-  const focusRow = (goalId: string) => {
-    requestAnimationFrame(() => triggers.current.get(goalId)?.focus());
+  const focusDetailsTrigger = () => {
+    const trigger = detailsTrigger.current;
+    const goalId = detailsGoalId.current;
+    detailsTrigger.current = null;
+    detailsGoalId.current = null;
+    requestAnimationFrame(() => {
+      let target: HTMLElement | null = trigger;
+      if (!target?.isConnected) {
+        target = goalId ? (checks.current.get(goalId) ?? null) : null;
+      }
+      target?.focus();
+    });
   };
 
   const openDetails = (goalId: string) => {
     if (undo?.goalId === goalId) {
       clearUndo();
     }
+    detailsTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    detailsGoalId.current = goalId;
     setOpenGoalId(goalId);
   };
 
   const closeDetails = () => {
-    const goalId = openGoalId;
     setOpenGoalId(null);
-    if (goalId) {
-      focusRow(goalId);
-    }
+    focusDetailsTrigger();
   };
 
   const handleRemoved = (goalName: string) => {
-    const goalId = openGoalId;
     setOpenGoalId(null);
     setAnnouncement(`${goalName} marked not done.`);
-    if (goalId) {
-      focusRow(goalId);
-    }
+    focusDetailsTrigger();
   };
 
   return (
@@ -252,7 +266,7 @@ const TodayPage = () => {
       onOpenDetails={openDetails}
       onCloseDetails={closeDetails}
       onRemoved={handleRemoved}
-      registerTrigger={registerTrigger}
+      onRegisterAction={registerAction}
     />
   );
 };
@@ -260,7 +274,7 @@ const TodayPage = () => {
 export const Route = createFileRoute("/_auth/today")({
   beforeLoad: async () => {
     const status = await client.onboarding.status().catch(() => null);
-    if (status && !status.completed) {
+    if (status && needsOnboarding(status.completed)) {
       throw redirect({ to: "/onboarding" });
     }
   },

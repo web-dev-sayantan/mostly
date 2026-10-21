@@ -338,7 +338,7 @@ const GoalCard = ({
       </span>
     </div>
 
-    <div className="mt-4 flex items-end justify-between gap-3">
+    <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
       {card.unit === "week" ? (
         <WeekCells
           weeks={card.weeks}

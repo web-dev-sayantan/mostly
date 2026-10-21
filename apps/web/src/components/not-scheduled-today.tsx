@@ -21,7 +21,7 @@ export const NotScheduledToday = ({ date }: { date: string }) => {
 
   return (
     <details className="bg-card group rounded-2xl border">
-      <summary className="hover:bg-muted/60 flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 [&::-webkit-details-marker]:hidden">
+      <summary className="hover:bg-muted/60 focus-visible:ring-ring/50 flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 focus-visible:ring-2 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1 text-base font-medium">
           Not scheduled today
         </span>

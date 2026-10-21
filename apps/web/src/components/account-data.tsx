@@ -1,7 +1,7 @@
 import { Button } from "@mostly/ui/components/button";
 import { Input } from "@mostly/ui/components/input";
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AccountSection } from "@/components/account-section";
@@ -67,7 +67,10 @@ const signIn = async () => {
 const SyncNotice = ({ status }: { status: SyncStatus }) => {
   if (status.authExpired) {
     return (
-      <output className="bg-muted/50 grid gap-3 rounded-lg border p-3">
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-3 rounded-lg border p-3"
+      >
         <div>
           <p className="text-sm font-medium">Your session expired</p>
           <p className="text-muted-foreground text-sm">
@@ -88,13 +91,16 @@ const SyncNotice = ({ status }: { status: SyncStatus }) => {
             Sign in
           </Button>
         )}
-      </output>
+      </div>
     );
   }
 
   if (status.conflicts.length > 0) {
     return (
-      <output className="bg-muted/50 grid gap-2 rounded-lg border p-3">
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-2 rounded-lg border p-3"
+      >
         <p className="text-sm font-medium">{CONFLICT_NOTICE_COPY}</p>
         <p className="text-muted-foreground text-sm">
           A newer edit from another device won. Your local copy stays on this
@@ -111,13 +117,16 @@ const SyncNotice = ({ status }: { status: SyncStatus }) => {
             </li>
           ))}
         </ul>
-      </output>
+      </div>
     );
   }
 
   if (status.state === "error") {
     return (
-      <output className="bg-muted/50 grid gap-3 rounded-lg border p-3">
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-3 rounded-lg border p-3"
+      >
         <p className="text-sm">
           Couldn&apos;t sync. Your changes are saved on this device.
         </p>
@@ -129,7 +138,7 @@ const SyncNotice = ({ status }: { status: SyncStatus }) => {
         >
           Try again
         </Button>
-      </output>
+      </div>
     );
   }
 
@@ -140,11 +149,13 @@ const SignOutControl = () => {
   const [open, setOpen] = useState(false);
   const [discardWarning, setDiscardWarning] = useState(false);
   const [working, setWorking] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   const close = () => {
     setOpen(false);
     setDiscardWarning(false);
     setWorking(false);
+    requestAnimationFrame(() => trigger.current?.focus());
   };
 
   const signOut = async () => {
@@ -174,6 +185,7 @@ const SignOutControl = () => {
   if (!open) {
     return (
       <Button
+        ref={trigger}
         type="button"
         variant="outline"
         className="min-h-11 w-fit px-4 text-sm"
@@ -187,8 +199,10 @@ const SignOutControl = () => {
   return (
     <div className="bg-muted/50 grid gap-3 rounded-lg border p-3">
       <div>
-        <p className="text-sm font-medium">Sign out and clear this device?</p>
-        <p className="text-muted-foreground text-sm">
+        <p id="sign-out-heading" className="text-sm font-medium">
+          Sign out and clear this device?
+        </p>
+        <p id="sign-out-description" className="text-muted-foreground text-sm">
           Saved sessions sync first. This device keeps nothing after you sign
           out.
         </p>
@@ -202,6 +216,8 @@ const SignOutControl = () => {
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
+          autoFocus
+          aria-describedby="sign-out-description"
           className="min-h-11 px-4 text-sm"
           disabled={working}
           onClick={signOut}
@@ -231,6 +247,7 @@ const DeleteAccountControl = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
+  const trigger = useRef<HTMLButtonElement>(null);
   const remove = useMutation(
     orpc.account.delete.mutationOptions({
       onSuccess: () => finishAccountDeletion(),
@@ -243,11 +260,13 @@ const DeleteAccountControl = ({
   const close = () => {
     setOpen(false);
     setConfirmation("");
+    requestAnimationFrame(() => trigger.current?.focus());
   };
 
   if (!open) {
     return (
       <Button
+        ref={trigger}
         type="button"
         variant="destructive"
         className="min-h-11 w-fit px-4 text-sm"
@@ -261,7 +280,7 @@ const DeleteAccountControl = ({
   return (
     <div className="border-destructive/40 grid gap-3 rounded-lg border p-3">
       <div className="grid gap-1">
-        <p className="text-sm font-medium">
+        <p id="delete-account-warning" className="text-sm font-medium">
           This removes your account and every session. This can&apos;t be
           undone.
         </p>
@@ -286,8 +305,10 @@ const DeleteAccountControl = ({
         <Input
           id="delete-account-confirm"
           value={confirmation}
+          autoFocus
           autoComplete="off"
           spellCheck={false}
+          aria-describedby="delete-account-warning"
           className="min-h-11 max-w-64 text-base"
           onChange={(event) => setConfirmation(event.target.value)}
         />
@@ -296,6 +317,7 @@ const DeleteAccountControl = ({
         <Button
           type="button"
           variant="destructive"
+          aria-describedby="delete-account-warning"
           className="min-h-11 px-4 text-sm"
           disabled={confirmation !== "DELETE" || remove.isPending}
           onClick={() => remove.mutate({ confirm: "DELETE" })}

@@ -82,6 +82,20 @@ export const describeSession = (
   return `${parts.join(", ")}.`;
 };
 
+/** The check target's accessible name, shared with its tests. */
+export const checkButtonLabel = (
+  goalName: string,
+  done: boolean,
+  detailsSupported: boolean
+): string => {
+  if (!done) {
+    return `Mark ${goalName} done`;
+  }
+  return detailsSupported
+    ? `${goalName} done. Edit details.`
+    : `${goalName} done.`;
+};
+
 /** Last 7 logical days and active-goal history stay editable. */
 export const isSessionReadOnly = (
   goal: GoalDto,

@@ -1,7 +1,7 @@
 import { Button } from "@mostly/ui/components/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { DataControls } from "@/components/account-data";
@@ -186,7 +186,9 @@ const Preferences = () => {
       ) : null}
       {settingsQuery.isError ? (
         <div className="grid gap-3">
-          <p className="text-sm">Could not load settings.</p>
+          <p role="alert" className="text-sm">
+            Could not load settings.
+          </p>
           <Button
             variant="outline"
             className="min-h-11 w-fit px-4 text-sm"
@@ -305,6 +307,11 @@ const TimeZonePreference = ({
   onSave: () => void;
 }) => {
   const [confirming, setConfirming] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const cancel = () => {
+    setConfirming(false);
+    requestAnimationFrame(() => trigger.current?.focus());
+  };
 
   return (
     <div className="grid gap-2">
@@ -316,13 +323,15 @@ const TimeZonePreference = ({
       </p>
       {confirming ? (
         <div className="bg-muted/50 grid gap-3 rounded-lg border p-3">
-          <p className="text-sm">
+          <p id="timezone-confirm-copy" className="text-sm">
             Use {detected}? This applies from the next day. Past days keep their
             timezone.
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
               className="min-h-11 px-4 text-sm"
+              autoFocus
+              aria-describedby="timezone-confirm-copy"
               disabled={isSaving}
               onClick={onSave}
             >
@@ -332,7 +341,7 @@ const TimeZonePreference = ({
               variant="ghost"
               className="min-h-11 px-4 text-sm"
               disabled={isSaving}
-              onClick={() => setConfirming(false)}
+              onClick={cancel}
             >
               Cancel
             </Button>
@@ -341,6 +350,7 @@ const TimeZonePreference = ({
       ) : null}
       {!confirming && detected !== currentTimeZone ? (
         <Button
+          ref={trigger}
           variant="outline"
           className="min-h-11 w-fit px-4 text-sm"
           disabled={isSaving}
