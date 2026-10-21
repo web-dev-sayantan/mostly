@@ -23,8 +23,8 @@ import {
   MOOD_LABELS,
   SessionDetails,
   SessionDetailsEditor,
-} from "@/components/session-details";
-import type { SessionDetailValues } from "@/components/session-details";
+} from "@/components/session-details-inline";
+import type { SessionDetailValues } from "@/components/session-details-inline";
 import { cacheDayDetail, cachedDayDetail } from "@/lib/day-cache";
 import { cadenceSummary } from "@/lib/goals";
 import {
