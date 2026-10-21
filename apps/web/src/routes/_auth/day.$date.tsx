@@ -473,8 +473,8 @@ const DayPage = () => {
     if (!remote) {
       return;
     }
-    cacheDayDetail(remote);
     cacheServerSessions(remote.weekSessions);
+    cacheDayDetail(remote);
     // The local store is the source after its server cache is seeded.
     // eslint-disable-next-line react/set-state-in-effect -- hydration flag for the offline overlay
     setHydratedDate(remote.date);
