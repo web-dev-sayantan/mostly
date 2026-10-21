@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import type { ProgressGoal, ProgressSession } from "./progress";
 import { buildProgress } from "./progress";
-import type { Cadence, ScheduleVersion } from "./schedule";
+import type { Cadence, ScheduleVersion, Weekday } from "./schedule";
 
 const TODAY = "2026-02-02";
 
@@ -13,8 +13,8 @@ const version = (effectiveFrom: string, cadence: Cadence): ScheduleVersion => ({
 
 const daily = (startDate: string) => version(startDate, { type: "daily" });
 
-const weekdays = (startDate: string, days: number[]) =>
-  version(startDate, { type: "weekdays", weekdays: days as never });
+const weekdays = (startDate: string, days: Weekday[]) =>
+  version(startDate, { type: "weekdays", weekdays: days });
 
 const weekly = (startDate: string, target: number) =>
   version(startDate, { type: "weekly_target", target });
