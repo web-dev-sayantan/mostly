@@ -5,7 +5,7 @@ const PrivacyPage = () => (
     <div>
       <a
         href="/account"
-        className="focus-visible:ring-ring/50 inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
       >
         Back to Account
       </a>

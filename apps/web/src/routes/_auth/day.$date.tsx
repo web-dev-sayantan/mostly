@@ -290,6 +290,7 @@ const DayRow = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const row = useRef<HTMLLIElement>(null);
   const subtitle = [
     meta,
     goal.archivedOn ? "Archived" : null,
@@ -312,19 +313,38 @@ const DayRow = ({
 
   const close = () => {
     setEditing(false);
-    trigger.current?.focus();
+    requestAnimationFrame(() => {
+      const target = trigger.current?.isConnected
+        ? trigger.current
+        : row.current;
+      target?.focus();
+    });
+  };
+
+  const complete = () => {
+    onMarkDone();
+    requestAnimationFrame(() => {
+      const button = row.current?.querySelector<HTMLButtonElement>("button");
+      (button ?? row.current)?.focus();
+    });
   };
 
   return (
-    <li className="bg-card rounded-2xl border">
+    <li
+      ref={row}
+      id={`day-goal-${goal.id}`}
+      tabIndex={-1}
+      className="bg-card focus-visible:ring-ring rounded-2xl border focus-visible:ring-2 focus-visible:outline-none"
+    >
       {session && editable ? (
         <button
           ref={trigger}
           type="button"
           aria-expanded={editing}
+          aria-controls={editing ? `day-details-${goal.id}` : undefined}
           aria-label={accessibleName}
           onClick={() => setEditing((open) => !open)}
-          className="hover:bg-muted/50 focus-visible:ring-ring/50 flex min-h-14 w-full items-center gap-3 rounded-2xl px-4 py-3 text-left focus-visible:ring-1 focus-visible:outline-none"
+          className="hover:bg-muted/50 focus-visible:ring-ring flex min-h-14 w-full items-center gap-3 rounded-2xl px-4 py-3 text-left focus-visible:ring-1 focus-visible:outline-none"
         >
           <GoalMark goal={goal} />
           <span className="min-w-0 flex-1">
@@ -352,7 +372,8 @@ const DayRow = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onMarkDone}
+                onClick={complete}
+                aria-label={`Mark ${goal.name} done`}
                 className="min-h-11 rounded-full px-3 text-sm"
               >
                 Mark done
@@ -363,7 +384,7 @@ const DayRow = ({
       )}
 
       {editing && session ? (
-        <div className="border-t p-4">
+        <div id={`day-details-${goal.id}`} className="border-t p-4">
           <SessionDetailsEditor
             session={session}
             onSave={(values) => {
@@ -670,12 +691,21 @@ const DayPage = () => {
               type="button"
               disabled={selected === ""}
               onClick={() => {
+                const goalId = selected;
                 markSessionDone({
-                  goalId: selected,
+                  goalId,
                   logicalDate: date,
                 });
                 setSelectedGoal("");
                 toast.success("Saved");
+                requestAnimationFrame(() => {
+                  const target = document.querySelector<HTMLElement>(
+                    `#day-goal-${CSS.escape(goalId)}`
+                  );
+                  const button =
+                    target?.querySelector<HTMLButtonElement>("button");
+                  (button ?? target)?.focus();
+                });
               }}
               className="min-h-11 rounded-full px-4 text-sm"
             >

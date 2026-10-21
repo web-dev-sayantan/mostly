@@ -39,7 +39,8 @@ export const TodayReminderFallback = () => {
   const pushReady =
     Boolean(overview?.configured) &&
     permission === "granted" &&
-    endpoint !== null;
+    endpoint !== null &&
+    overview?.deliveredToday?.status !== "failed";
   const canStillEnable =
     Boolean(overview?.configured) &&
     permission === "default" &&
@@ -63,7 +64,7 @@ export const TodayReminderFallback = () => {
       <p>{reminderCopy(overview.openCount)}</p>
       <Link
         to="/account"
-        className="focus-visible:ring-ring/50 mt-2 inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring mt-2 inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
       >
         Reminder settings
       </Link>

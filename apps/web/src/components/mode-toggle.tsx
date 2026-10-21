@@ -9,27 +9,38 @@ import { Moon, Sun } from "lucide-react";
 
 import { useTheme } from "@/components/theme-provider";
 
-export function ModeToggle() {
+export const ModeToggle = () => {
   const { setTheme } = useTheme();
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" className="size-11 rounded-full" />}>
-        <Sun className="size-5 dark:hidden" />
-        <Moon className="hidden size-5 dark:block" />
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" className="size-11 rounded-full" />}
+      >
+        <Sun aria-hidden="true" className="size-5 dark:hidden" />
+        <Moon aria-hidden="true" className="hidden size-5 dark:block" />
         <span className="sr-only">Toggle theme</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-card">
-        <DropdownMenuItem className="min-h-11 text-sm" onClick={() => setTheme("light")}>
+      <DropdownMenuContent align="end" className="bg-card" aria-label="Theme">
+        <DropdownMenuItem
+          className="min-h-11 text-sm"
+          onClick={() => setTheme("light")}
+        >
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11 text-sm" onClick={() => setTheme("dark")}>
+        <DropdownMenuItem
+          className="min-h-11 text-sm"
+          onClick={() => setTheme("dark")}
+        >
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11 text-sm" onClick={() => setTheme("system")}>
+        <DropdownMenuItem
+          className="min-h-11 text-sm"
+          onClick={() => setTheme("system")}
+        >
           System
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};

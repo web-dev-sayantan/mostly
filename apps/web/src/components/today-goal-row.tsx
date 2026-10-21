@@ -4,7 +4,11 @@ import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cadenceSummary } from "@/lib/goals";
-import { describeSession, detailsSummary } from "@/lib/session-details";
+import {
+  checkButtonLabel,
+  describeSession,
+  detailsSummary,
+} from "@/lib/session-details";
 import type { TodayGoal, WeeklyGoal } from "@/lib/today";
 import {
   hasSessionDetails,
@@ -63,7 +67,7 @@ const CheckTarget = ({
   description,
   onMarkDone,
   onOpenDetails,
-  registerTrigger,
+  onRegisterAction,
 }: {
   goal: GoalDto;
   done: boolean;
@@ -72,32 +76,29 @@ const CheckTarget = ({
   description?: string;
   onMarkDone: (goal: GoalDto) => void;
   onOpenDetails?: (goalId: string) => void;
-  registerTrigger?: (goalId: string, node: HTMLButtonElement | null) => void;
+  onRegisterAction?: (goalId: string, node: HTMLButtonElement | null) => void;
 }) => {
   const canEditDetails = done && detailsSupported && onOpenDetails;
   let onClick: (() => void) | undefined = () => onMarkDone(goal);
-  let label = `Mark ${goal.name} done`;
   if (done) {
     onClick = undefined;
-    label = `${goal.name} done.`;
     if (canEditDetails) {
       onClick = () => onOpenDetails(goal.id);
-      label = `${goal.name} done. Edit details.`;
     }
   }
 
   return (
     <button
-      ref={(node) => registerTrigger?.(goal.id, node)}
+      ref={(node) => onRegisterAction?.(goal.id, node)}
       type="button"
       onClick={onClick}
-      aria-label={label}
+      aria-label={checkButtonLabel(goal.name, done, Boolean(canEditDetails))}
       aria-describedby={
         done && description ? `today-description-${goal.id}` : undefined
       }
       aria-expanded={canEditDetails ? detailsOpen : undefined}
       aria-controls={canEditDetails ? `today-panel-${goal.id}` : undefined}
-      className="focus-visible:ring-ring/50 flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+      className="focus-visible:ring-ring flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
     >
       <span
         className={cn(
@@ -131,7 +132,7 @@ const UndoControl = ({
       type="button"
       onClick={onUndo}
       aria-label={`Undo ${goalName}`}
-      className="text-primary focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+      className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
     >
       Undo
     </button>
@@ -153,7 +154,7 @@ const AddDetails = ({
     aria-label={`Add details for ${goal.name}`}
     aria-expanded={detailsOpen}
     aria-controls={`today-panel-${goal.id}`}
-    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full px-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full px-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
   >
     Add details
   </button>
@@ -166,7 +167,7 @@ export interface TodayRowProps {
   onMarkDone: (goal: GoalDto) => void;
   onOpenDetails?: (goalId: string) => void;
   onUndo: () => void;
-  registerTrigger?: (goalId: string, node: HTMLButtonElement | null) => void;
+  onRegisterAction?: (goalId: string, node: HTMLButtonElement | null) => void;
 }
 
 export const TodayGoalRow = ({
@@ -177,7 +178,7 @@ export const TodayGoalRow = ({
   onMarkDone,
   onOpenDetails,
   onUndo,
-  registerTrigger,
+  onRegisterAction,
 }: TodayRowProps & { entry: TodayGoal }) => {
   const { goal, cadence, session } = entry;
   const done = session !== null;
@@ -220,7 +221,7 @@ export const TodayGoalRow = ({
             }
             aria-expanded={detailsOpen}
             aria-controls={`today-panel-${goal.id}`}
-            className="focus-visible:ring-ring/50 flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
           >
             {content}
           </button>
@@ -245,7 +246,7 @@ export const TodayGoalRow = ({
             description={description}
             onMarkDone={onMarkDone}
             onOpenDetails={onOpenDetails}
-            registerTrigger={registerTrigger}
+            onRegisterAction={onRegisterAction}
           />
         </div>
       </div>
@@ -288,7 +289,7 @@ export const WeeklyGoalRow = ({
   onMarkDone,
   onOpenDetails,
   onUndo,
-  registerTrigger,
+  onRegisterAction,
 }: TodayRowProps & { entry: WeeklyGoal }) => {
   const { goal, session } = entry;
   const done = session !== null;
@@ -342,7 +343,7 @@ export const WeeklyGoalRow = ({
             }
             aria-expanded={detailsOpen}
             aria-controls={`today-panel-${goal.id}`}
-            className="focus-visible:ring-ring/50 flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
           >
             {content}
           </button>
@@ -361,10 +362,11 @@ export const WeeklyGoalRow = ({
           ) : null}
           {!done && entry.met ? (
             <button
+              ref={(node) => onRegisterAction?.(goal.id, node)}
               type="button"
               onClick={() => onMarkDone(goal)}
               aria-label={`Log another session for ${goal.name}`}
-              className="border-border hover:bg-muted focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              className="border-border hover:bg-muted focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
             >
               Log another session
             </button>
@@ -377,7 +379,7 @@ export const WeeklyGoalRow = ({
               description={description}
               onMarkDone={onMarkDone}
               onOpenDetails={onOpenDetails}
-              registerTrigger={registerTrigger}
+              onRegisterAction={onRegisterAction}
             />
           )}
         </div>

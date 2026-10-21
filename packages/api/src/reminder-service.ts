@@ -265,6 +265,16 @@ export const runReminders = async ({
       continue;
     }
 
+    // No push path means nothing to send or retry. The in-app reminder covers
+    // this case; recording a failed delivery would only be noise.
+    if (!sender) {
+      continue;
+    }
+    const subscriptions = await activeSubscriptions(db, row.id);
+    if (subscriptions.length === 0) {
+      continue;
+    }
+
     const [claimed] = await db
       .insert(reminderDelivery)
       .values({
@@ -278,25 +288,6 @@ export const runReminders = async ({
       .onConflictDoNothing()
       .returning({ id: reminderDelivery.id });
     if (!claimed) {
-      continue;
-    }
-
-    if (!sender) {
-      await db
-        .update(reminderDelivery)
-        .set({ status: "failed", error: "push_unconfigured" })
-        .where(eq(reminderDelivery.id, claimed.id));
-      summary.failed += 1;
-      continue;
-    }
-
-    const subscriptions = await activeSubscriptions(db, row.id);
-    if (subscriptions.length === 0) {
-      await db
-        .update(reminderDelivery)
-        .set({ status: "failed", error: "no_subscription" })
-        .where(eq(reminderDelivery.id, claimed.id));
-      summary.failed += 1;
       continue;
     }
 

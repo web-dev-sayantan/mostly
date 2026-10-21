@@ -7,7 +7,7 @@ const LicensesPage = () => (
     <div>
       <a
         href="/account"
-        className="focus-visible:ring-ring/50 inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
       >
         Back to Account
       </a>
@@ -31,7 +31,7 @@ const LicensesPage = () => (
       href={SOURCE_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="focus-visible:ring-ring/50 inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+      className="focus-visible:ring-ring inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
     >
       {SOURCE_URL}
     </a>

@@ -13,7 +13,9 @@ import type { CadenceFormValue } from "@/components/cadence-fields";
 import { authClient, signInWithGoogle } from "@/lib/auth-client";
 import { cadenceSummary, defaultStartDate } from "@/lib/goals";
 import {
+  onboardingIsComplete,
   REMINDER_PERMISSION_COPY,
+  shouldRequestPush,
   STARTER_GOALS,
   TODAY_HINT_KEY,
 } from "@/lib/onboarding";
@@ -60,7 +62,7 @@ const SignInStep = () => {
       <h1
         id="onboarding-sign-in"
         tabIndex={-1}
-        className="mt-3 text-[28px] leading-tight font-medium outline-none"
+        className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
       >
         Sign in to Mostly
       </h1>
@@ -108,10 +110,10 @@ const OnboardingPage = () => {
   });
 
   useEffect(() => {
-    if (step > 1) {
+    if (step > 1 && session.data) {
       headingRef.current?.focus();
     }
-  }, [step]);
+  }, [step, session.data]);
 
   const toggleStarter = (name: string, emoji: string) => {
     setDrafts((current) =>
@@ -155,12 +157,10 @@ const OnboardingPage = () => {
     setFinishError(null);
 
     try {
-      if (
-        withReminder &&
-        platform !== "ios" &&
-        publicKeyQuery.data?.publicKey
-      ) {
-        await enablePushReminders(publicKeyQuery.data.publicKey);
+      const publicKey = publicKeyQuery.data?.publicKey ?? null;
+      if (shouldRequestPush({ requested: withReminder, platform, publicKey })) {
+        // If push cannot work here, the in-app reminder still covers the choice.
+        await enablePushReminders(publicKey ?? undefined);
       }
 
       const startDate = defaultStartDate();
@@ -215,7 +215,13 @@ const OnboardingPage = () => {
   return (
     <main className="mx-auto grid min-h-svh w-full max-w-2xl content-start gap-6 px-6 py-10">
       <header className="flex items-center gap-2">
-        <img src="/icon.svg" alt="" className="size-8 rounded-lg" />
+        <img
+          src="/icon.svg"
+          alt=""
+          width={32}
+          height={32}
+          className="size-8 rounded-lg"
+        />
         <span className="font-medium">mostly</span>
       </header>
 
@@ -228,7 +234,7 @@ const OnboardingPage = () => {
             id="onboarding-goals"
             ref={headingRef}
             tabIndex={-1}
-            className="mt-3 text-[28px] leading-tight font-medium outline-none"
+            className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
           >
             Pick a few things to keep doing.
           </h1>
@@ -249,7 +255,7 @@ const OnboardingPage = () => {
                     type="button"
                     aria-pressed={selected}
                     onClick={() => toggleStarter(starter.name, starter.emoji)}
-                    className="border-border hover:bg-muted aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:border-primary inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm"
+                    className="border-border hover:bg-muted aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:border-primary focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none"
                   >
                     <span aria-hidden="true">{starter.emoji}</span>
                     {starter.name}
@@ -348,7 +354,7 @@ const OnboardingPage = () => {
               Continue
             </Button>
             <span className="text-muted-foreground self-center text-sm">
-              You can skip this and add goals later.
+              You can add goals later.
             </span>
           </div>
         </section>
@@ -361,12 +367,16 @@ const OnboardingPage = () => {
             id="onboarding-reminder"
             ref={headingRef}
             tabIndex={-1}
-            className="mt-3 text-[28px] leading-tight font-medium outline-none"
+            className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
           >
             Choose a reminder time.
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             {REMINDER_PERMISSION_COPY}
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            If notifications aren&apos;t available on this device, the reminder
+            appears when you open Mostly.
           </p>
 
           <div className="mt-6 grid gap-2">
@@ -443,7 +453,7 @@ export const Route = createFileRoute("/onboarding")({
       return;
     }
     const status = await client.onboarding.status().catch(() => null);
-    if (status?.completed) {
+    if (onboardingIsComplete(true, status?.completed ?? null)) {
       throw redirect({ to: "/today" });
     }
   },

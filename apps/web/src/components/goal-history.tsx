@@ -85,7 +85,7 @@ const DayTable = ({ days }: { days: GoalDayCellDto[] }) => (
               <Link
                 to="/day/$date"
                 params={{ date: day.date }}
-                className="hover:text-foreground text-muted-foreground inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+                className="hover:text-foreground text-muted-foreground focus-visible:ring-ring inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:ring-1 focus-visible:outline-none"
               >
                 {formatLogicalDate(day.date)}
               </Link>
@@ -133,7 +133,7 @@ const WeekTable = ({ weeks }: { weeks: GoalWeek[] }) => (
               <Link
                 to="/day/$date"
                 params={{ date: week.start }}
-                className="hover:text-foreground text-muted-foreground inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+                className="hover:text-foreground text-muted-foreground focus-visible:ring-ring inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:ring-1 focus-visible:outline-none"
               >
                 {formatDayMonth(week.start)} – {formatDayMonth(week.end)}
               </Link>
@@ -169,7 +169,7 @@ const DayHeatmap = ({
           {weekdays.map((day) => (
             <span
               key={day?.value}
-              className="text-muted-foreground flex h-4 items-center text-[10px]"
+              className="text-muted-foreground flex h-4 items-center text-sm leading-none"
             >
               {day?.short.slice(0, 1)}
             </span>
@@ -223,7 +223,7 @@ const WeekStrip = ({ weeks }: { weeks: GoalWeek[] }) => (
         <span className="block text-sm font-medium">
           {week.target ? `${week.sessions}/${week.target}` : "—"}
         </span>
-        <span className="block text-[11px]">{weekLabel(week)}</span>
+        <span className="block text-sm">{weekLabel(week)}</span>
         <span className="sr-only">
           {formatDayMonth(week.start)} to {formatDayMonth(week.end)}:{" "}
           {WEEK_OUTCOME[week.status]}

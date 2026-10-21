@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@mostly/ui/components/dropdown-menu";
 import { Skeleton } from "@mostly/ui/components/skeleton";
+import { Link } from "@tanstack/react-router";
 
 import { authClient } from "@/lib/auth-client";
 
@@ -66,9 +67,13 @@ const UserMenu = () => {
           {name}
         </span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-card min-w-56">
+      <DropdownMenuContent
+        align="end"
+        className="bg-card min-w-56"
+        aria-label="Account"
+      >
         <DropdownMenuGroup>
-          <DropdownMenuLabel>
+          <DropdownMenuLabel className="text-sm">
             <span className="text-foreground block truncate text-sm">
               {name}
             </span>
@@ -77,7 +82,7 @@ const UserMenu = () => {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="min-h-11 text-sm"
-            onClick={() => window.location.assign("/account")}
+            render={<Link to="/account" />}
           >
             Account and data
           </DropdownMenuItem>

@@ -4,7 +4,7 @@ import { cn } from "@mostly/ui/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { GoalEditor } from "@/components/goal-editor";
@@ -134,6 +134,7 @@ const GoalDetailPage = () => {
   const online = useOnline();
   const syncStatus = useSyncStatus();
   const [editing, setEditing] = useState(false);
+  const editTrigger = useRef<HTMLButtonElement>(null);
   const detailQuery = useQuery(orpc.stats.goal.queryOptions({ input: { id } }));
   const detail = detailQuery.data;
 
@@ -186,6 +187,10 @@ const GoalDetailPage = () => {
   const archived = isArchived(goal, today);
   const cadence = cadenceSummary(effectiveCadence(goal, today));
   const note = timingNote(goal, today);
+  const closeEditor = () => {
+    setEditing(false);
+    requestAnimationFrame(() => editTrigger.current?.focus());
+  };
 
   let content: ReactNode = null;
   if (editing) {
@@ -193,9 +198,9 @@ const GoalDetailPage = () => {
       <GoalEditor
         key={goal.id}
         goal={goal}
-        onClose={() => setEditing(false)}
+        onClose={closeEditor}
         onDone={() => {
-          setEditing(false);
+          closeEditor();
           refresh();
         }}
         onDeleted={() => navigate({ to: "/goals" })}
@@ -272,6 +277,7 @@ const GoalDetailPage = () => {
           </div>
         </div>
         <Button
+          ref={editTrigger}
           type="button"
           variant="outline"
           onClick={() => setEditing(true)}

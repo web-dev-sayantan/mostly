@@ -39,7 +39,7 @@ export const TodayScreen = ({
   onOpenDetails,
   onCloseDetails,
   onRemoved,
-  registerTrigger,
+  onRegisterAction,
 }: {
   view: TodayView;
   today: string;
@@ -54,7 +54,7 @@ export const TodayScreen = ({
   onOpenDetails: (goalId: string) => void;
   onCloseDetails: () => void;
   onRemoved: (goalName: string) => void;
-  registerTrigger: (goalId: string, node: HTMLButtonElement | null) => void;
+  onRegisterAction: (goalId: string, node: HTMLButtonElement | null) => void;
 }) => {
   const [showHint, setShowHint] = useState(() => {
     try {
@@ -80,7 +80,7 @@ export const TodayScreen = ({
   const progressCopy = todayProgressCopy(view);
   const activeUndo = undo?.logicalDate === today ? undo : null;
   const emptyCopy = hasAnyGoal
-    ? "Nothing expected today."
+    ? "Nothing scheduled today."
     : "Add the first thing you want to keep doing.";
   const detailsFor = (goal: GoalDto, session: LocalSession | null) => {
     if (!session || openGoalId !== goal.id) {
@@ -125,7 +125,7 @@ export const TodayScreen = ({
             <button
               type="button"
               onClick={dismissHint}
-              className="focus-visible:ring-ring/50 min-h-11 rounded-full px-3 text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+              className="focus-visible:ring-ring min-h-11 rounded-full px-3 text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
             >
               Dismiss
             </button>
@@ -145,7 +145,7 @@ export const TodayScreen = ({
             {hasAnyGoal ? null : (
               <Link
                 to="/goals"
-                className="bg-primary text-primary-foreground focus-visible:ring-ring/50 mt-4 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+                className="bg-primary text-primary-foreground focus-visible:ring-ring mt-4 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
               >
                 Add a goal
               </Link>
@@ -156,7 +156,8 @@ export const TodayScreen = ({
             <section aria-labelledby="today-heading" className="mt-6">
               <h2
                 id="today-heading"
-                className="text-muted-foreground text-sm font-medium tracking-wide uppercase"
+                tabIndex={-1}
+                className="text-muted-foreground focus-visible:ring-ring rounded-lg text-sm font-medium tracking-wide uppercase focus-visible:ring-2 focus-visible:outline-none"
               >
                 Today
               </h2>
@@ -172,7 +173,7 @@ export const TodayScreen = ({
                       onMarkDone={onMarkDone}
                       onOpenDetails={onOpenDetails}
                       onUndo={onUndo}
-                      registerTrigger={registerTrigger}
+                      onRegisterAction={onRegisterAction}
                     />
                   ))}
                 </ul>
@@ -202,7 +203,7 @@ export const TodayScreen = ({
                       onMarkDone={onMarkDone}
                       onOpenDetails={onOpenDetails}
                       onUndo={onUndo}
-                      registerTrigger={registerTrigger}
+                      onRegisterAction={onRegisterAction}
                     />
                   ))}
                 </ul>

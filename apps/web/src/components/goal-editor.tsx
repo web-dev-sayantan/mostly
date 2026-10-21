@@ -103,7 +103,7 @@ const EmojiPicker = ({
         aria-pressed={value === null}
         onClick={() => onChange(null)}
         className={cn(
-          "border-border flex size-11 items-center justify-center rounded-full border text-sm",
+          "border-border focus-visible:ring-ring flex size-11 items-center justify-center rounded-full border text-sm focus-visible:ring-2 focus-visible:outline-none",
           value === null && "bg-muted border-foreground/40"
         )}
       >
@@ -120,7 +120,7 @@ const EmojiPicker = ({
           aria-pressed={value === emoji}
           onClick={() => onChange(emoji)}
           className={cn(
-            "border-border flex size-11 items-center justify-center rounded-full border text-xl",
+            "border-border focus-visible:ring-ring flex size-11 items-center justify-center rounded-full border text-xl focus-visible:ring-2 focus-visible:outline-none",
             value === emoji && "bg-muted border-foreground/40"
           )}
         >
@@ -149,7 +149,7 @@ const ColorPicker = ({
         aria-pressed={value === null}
         onClick={() => onChange(null)}
         className={cn(
-          "border-border flex size-11 items-center justify-center rounded-full border text-sm",
+          "border-border focus-visible:ring-ring flex size-11 items-center justify-center rounded-full border text-sm focus-visible:ring-2 focus-visible:outline-none",
           value === null && "bg-muted border-foreground/40"
         )}
       >
@@ -163,13 +163,15 @@ const ColorPicker = ({
           aria-pressed={value === color.value}
           onClick={() => onChange(color.value)}
           className={cn(
-            "border-border flex size-11 items-center justify-center rounded-full border-2",
-            value === color.value && "border-foreground/60"
+            "border-border focus-visible:ring-ring flex size-11 items-center justify-center rounded-full border-2 focus-visible:ring-2 focus-visible:outline-none",
+            value === color.value && "border-foreground"
           )}
           style={{ backgroundColor: color.value }}
         >
           {value === color.value ? (
-            <Check aria-hidden="true" className="size-4 text-white" />
+            <span className="bg-background text-foreground flex size-5 items-center justify-center rounded-full">
+              <Check aria-hidden="true" className="size-3.5" />
+            </span>
           ) : null}
         </button>
       ))}
@@ -196,7 +198,7 @@ const PriorityPicker = ({
           aria-pressed={value === priority}
           onClick={() => onChange(priority)}
           className={cn(
-            "border-border min-h-11 flex-1 rounded-full border px-3 text-sm",
+            "border-border focus-visible:ring-ring min-h-11 flex-1 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
             value === priority &&
               "bg-primary text-primary-foreground border-primary"
           )}
@@ -229,9 +231,16 @@ const DangerZone = ({
   onArchive: () => void;
   onDelete: () => void;
 }) => {
+  const archiveTrigger = useRef<HTMLButtonElement>(null);
+  const deleteTrigger = useRef<HTMLButtonElement>(null);
   const deleteCopy = `This deletes ${goal.name} and all ${
     goal.sessionCount
   } ${goal.sessionCount === 1 ? "session" : "sessions"}. Export your data first? This can't be undone.`;
+
+  const cancel = (trigger: typeof archiveTrigger) => {
+    onCancel();
+    requestAnimationFrame(() => trigger.current?.focus());
+  };
 
   return (
     <div className="mt-6 border-t pt-4">
@@ -245,11 +254,15 @@ const DangerZone = ({
         </p>
       ) : (
         <div className="mt-3 space-y-3">
-          <p className="text-muted-foreground text-sm">{ARCHIVE_COPY}</p>
+          <p id="archive-goal-copy" className="text-muted-foreground text-sm">
+            {ARCHIVE_COPY}
+          </p>
           {confirmation === "archive" ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
+                autoFocus
+                aria-describedby="archive-goal-copy"
                 onClick={onArchive}
                 disabled={archivePending}
                 className="min-h-11 rounded-full px-4 text-sm"
@@ -259,7 +272,7 @@ const DangerZone = ({
               <Button
                 type="button"
                 variant="ghost"
-                onClick={onCancel}
+                onClick={() => cancel(archiveTrigger)}
                 className="min-h-11 rounded-full px-4 text-sm"
               >
                 Cancel
@@ -267,6 +280,7 @@ const DangerZone = ({
             </div>
           ) : (
             <Button
+              ref={archiveTrigger}
               type="button"
               variant="outline"
               onClick={() => onConfirm("archive")}
@@ -279,12 +293,16 @@ const DangerZone = ({
       )}
 
       <div className="mt-5 space-y-3">
-        <p className="text-muted-foreground text-sm">{deleteCopy}</p>
+        <p id="delete-goal-copy" className="text-muted-foreground text-sm">
+          {deleteCopy}
+        </p>
         {confirmation === "delete" ? (
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="destructive"
+              autoFocus
+              aria-describedby="delete-goal-copy"
               onClick={onDelete}
               disabled={deletePending}
               className="min-h-11 rounded-full px-4 text-sm"
@@ -294,7 +312,7 @@ const DangerZone = ({
             <Button
               type="button"
               variant="ghost"
-              onClick={onCancel}
+              onClick={() => cancel(deleteTrigger)}
               className="min-h-11 rounded-full px-4 text-sm"
             >
               Cancel
@@ -302,6 +320,7 @@ const DangerZone = ({
           </div>
         ) : (
           <Button
+            ref={deleteTrigger}
             type="button"
             variant="destructive"
             onClick={() => onConfirm("delete")}
@@ -443,7 +462,7 @@ export const GoalEditor = ({
           id={`${fieldId}-title`}
           ref={headingRef}
           tabIndex={-1}
-          className="text-lg font-medium outline-none"
+          className="focus-visible:ring-ring min-w-0 rounded-lg text-lg font-medium break-words focus-visible:ring-2 focus-visible:outline-none"
         >
           {goal ? goal.name : "New goal"}
         </h2>
@@ -541,10 +560,20 @@ export const GoalEditor = ({
             min={today}
             disabled={archived || startLocked}
             onChange={(event) => updateForm({ startDate: event.target.value })}
+            aria-invalid={validationError?.field === "startDate"}
+            aria-describedby={
+              validationError?.field === "startDate"
+                ? `${fieldId}-start-error`
+                : undefined
+            }
             className="h-11 text-base"
           />
           {validationError?.field === "startDate" ? (
-            <p role="alert" className="text-destructive text-sm">
+            <p
+              id={`${fieldId}-start-error`}
+              role="alert"
+              className="text-destructive text-sm"
+            >
               {validationError.message}
             </p>
           ) : null}

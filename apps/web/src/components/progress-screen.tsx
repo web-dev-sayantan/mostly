@@ -163,7 +163,7 @@ const RangeSelector = ({
         aria-label={`${value} days`}
         onClick={() => onChange(value)}
         className={cn(
-          "focus-visible:ring-ring/50 min-h-11 rounded-full px-3 text-sm tabular-nums focus-visible:ring-2 focus-visible:outline-none",
+          "focus-visible:ring-ring min-h-11 rounded-full px-3 text-sm tabular-nums focus-visible:ring-2 focus-visible:outline-none",
           range === value
             ? "bg-primary text-primary-foreground"
             : "text-muted-foreground hover:text-foreground"
@@ -183,7 +183,7 @@ const TodayBanner = ({ today }: { today: ProgressToday }) => {
   return (
     <Link
       to="/today"
-      className="bg-card focus-visible:ring-ring/50 mt-4 flex min-h-11 flex-wrap items-center gap-x-2 rounded-2xl border px-4 py-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+      className="bg-card focus-visible:ring-ring mt-4 flex min-h-11 flex-wrap items-center gap-x-2 rounded-2xl border px-4 py-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
     >
       <span className="font-medium">
         {today.done} of {today.total} today
@@ -265,7 +265,7 @@ const WeeklyStrip = ({ rows }: { rows: ProgressWeeklyRow[] }) => {
             <Link
               to="/goals/$id"
               params={{ id: row.goalId }}
-              className="focus-visible:ring-ring/50 flex min-h-11 w-32 shrink-0 items-center gap-2 rounded-lg focus-visible:ring-1 focus-visible:outline-none"
+              className="focus-visible:ring-ring flex min-h-11 w-32 shrink-0 items-center gap-2 rounded-lg focus-visible:ring-1 focus-visible:outline-none"
             >
               <span aria-hidden="true" className="text-lg">
                 {row.emoji ?? (
@@ -307,7 +307,7 @@ const GoalCard = ({
   <Link
     to="/goals/$id"
     params={{ id: card.goalId }}
-    className="bg-card focus-visible:ring-ring/50 block min-h-11 rounded-2xl border p-4 focus-visible:ring-2 focus-visible:outline-none"
+    className="bg-card focus-visible:ring-ring block min-h-11 rounded-2xl border p-4 focus-visible:ring-2 focus-visible:outline-none"
   >
     <div className="flex items-start gap-3">
       <span aria-hidden="true" className="text-2xl">
@@ -338,7 +338,7 @@ const GoalCard = ({
       </span>
     </div>
 
-    <div className="mt-4 flex items-end justify-between gap-3">
+    <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
       {card.unit === "week" ? (
         <WeekCells
           weeks={card.weeks}
@@ -433,7 +433,7 @@ const EmptyState = ({ today }: { today: ProgressToday }) => (
       {today.incomplete ? (
         <Link
           to="/today"
-          className="focus-visible:ring-ring/50 mt-4 inline-flex min-h-11 items-center rounded-full text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+          className="focus-visible:ring-ring mt-4 inline-flex min-h-11 items-center rounded-full text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
         >
           Close the day <span aria-hidden="true">→</span>
         </Link>

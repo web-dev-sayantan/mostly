@@ -202,7 +202,7 @@ export const SessionDetails = ({
         ref={panelRef}
         tabIndex={-1}
         aria-labelledby={headingId}
-        className="bg-muted/30 border-t p-4 outline-none"
+        className="bg-muted/30 focus-visible:ring-ring border-t p-4 outline-none focus-visible:ring-2"
       >
         <div className="flex items-start justify-between gap-2">
           <h3 id={headingId} className="text-base font-medium">
@@ -238,11 +238,11 @@ export const SessionDetails = ({
       ref={panelRef}
       tabIndex={-1}
       aria-labelledby={headingId}
-      className="bg-muted/30 border-t p-4 outline-none"
+      className="bg-muted/30 focus-visible:ring-ring border-t p-4 outline-none focus-visible:ring-2"
     >
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 id={headingId} className="text-base font-medium">
+        <div className="min-w-0">
+          <h3 id={headingId} className="text-base font-medium break-words">
             {goalName} details
           </h3>
           {summary ? (
@@ -278,7 +278,7 @@ export const SessionDetails = ({
               aria-pressed={minutesText === String(value)}
               onClick={() => changeMinutes(String(value))}
               className={cn(
-                "border-border focus-visible:ring-ring/50 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
+                "border-border focus-visible:ring-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
                 minutesText === String(value) &&
                   "bg-accent border-foreground/30"
               )}
@@ -361,7 +361,7 @@ export const SessionDetails = ({
               aria-pressed={mood === value}
               onClick={() => changeMood(value)}
               className={cn(
-                "border-border focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
+                "border-border focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
                 mood === value && "bg-accent border-foreground/30"
               )}
             >
@@ -383,7 +383,7 @@ export const SessionDetails = ({
         </Button>
         {confirmingRemove ? (
           <div className="bg-background/60 mt-3 rounded-xl border p-3">
-            <p className="text-sm">
+            <p id="remove-session-copy" className="text-sm">
               {logicalDate === today
                 ? `Mark ${goalName} as not done? This removes today's session.`
                 : `Mark ${goalName} as not done? This removes the session.`}
@@ -392,6 +392,7 @@ export const SessionDetails = ({
               <Button
                 type="button"
                 variant="destructive"
+                aria-describedby="remove-session-copy"
                 onClick={remove}
                 className="min-h-11 rounded-full px-4 text-sm"
               >

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import type { LocalSession } from "./offline/store";
 import {
+  checkButtonLabel,
   describeSession,
   detailsSummary,
   isSessionReadOnly,
@@ -100,6 +101,19 @@ describe("describeSession", () => {
 
   it("says only done for a bare session", () => {
     expect(describeSession("Reading", session())).toBe("Reading, done.");
+  });
+});
+
+describe("checkButtonLabel", () => {
+  it("names the open check target", () => {
+    expect(checkButtonLabel("Reading", false, true)).toBe("Mark Reading done");
+  });
+
+  it("names the done check and its details action", () => {
+    expect(checkButtonLabel("Reading", true, true)).toBe(
+      "Reading done. Edit details."
+    );
+    expect(checkButtonLabel("Reading", true, false)).toBe("Reading done.");
   });
 });
 
