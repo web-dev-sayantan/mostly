@@ -7,16 +7,14 @@ export const authClient = createAuthClient({
 });
 
 /**
- * Start Google sign-in and return to the app's start URL. iOS standalone PWAs
- * hand OAuth to the system browser and cannot keep that browser's cookies for
- * certain, so `/today` is the return path: the flow completes in the browser,
- * and the installed app can be reopened from there.
+ * Start Google sign-in and return to onboarding. A completed account is sent
+ * straight to Today; a new one picks goals and a reminder first.
  */
-export async function signInWithGoogle() {
+export const signInWithGoogle = async () => {
   const { origin } = window.location;
   const { data, error } = await authClient.signIn.social({
     provider: "google",
-    callbackURL: `${origin}/today`,
+    callbackURL: `${origin}/onboarding`,
     errorCallbackURL: `${origin}/login`,
     disableRedirect: true,
   });
@@ -29,4 +27,4 @@ export async function signInWithGoogle() {
   }
 
   window.location.assign(data.url);
-}
+};

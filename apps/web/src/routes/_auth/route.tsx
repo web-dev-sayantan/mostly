@@ -52,6 +52,7 @@ export const Route = createFileRoute("/_auth")({
       return;
     }
 
-    throw redirect({ to: "/login" });
+    // First run starts at onboarding; a completed account redirects to Today.
+    throw redirect({ to: "/onboarding" });
   },
 });

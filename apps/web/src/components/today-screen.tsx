@@ -2,8 +2,10 @@ import type { GoalDto } from "@mostly/api/routers/goals";
 import type { SettingValues } from "@mostly/domain";
 import { isBeforeRollover } from "@mostly/domain";
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 
 import type { LocalSession } from "@/lib/offline";
+import { TODAY_HINT_COPY, TODAY_HINT_KEY } from "@/lib/onboarding";
 import { isSessionReadOnly } from "@/lib/session-details";
 import type { TodayView } from "@/lib/today";
 import { dailyProgressPercent, todayProgressCopy } from "@/lib/today";
@@ -54,6 +56,23 @@ export const TodayScreen = ({
   onRemoved: (goalName: string) => void;
   registerTrigger: (goalId: string, node: HTMLButtonElement | null) => void;
 }) => {
+  const [showHint, setShowHint] = useState(() => {
+    try {
+      return localStorage.getItem(TODAY_HINT_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const dismissHint = () => {
+    setShowHint(false);
+    try {
+      localStorage.setItem(TODAY_HINT_KEY, "0");
+    } catch {
+      // The hint returns next open if storage is unavailable.
+    }
+  };
+  const hasVisibleGoals =
+    view.todayGoals.length > 0 || view.weeklyGoals.length > 0;
   const late = isBeforeRollover(now, {
     timeZone: settings.timeZone,
     rolloverHour: settings.dayRolloverHour,
@@ -96,6 +115,22 @@ export const TodayScreen = ({
           )}
           showBar={view.dailyTotal > 0}
         />
+
+        {showHint && hasVisibleGoals ? (
+          <aside
+            aria-label="Getting started"
+            className="bg-muted/50 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border p-4 text-sm"
+          >
+            <p className="min-w-0 flex-1">{TODAY_HINT_COPY}</p>
+            <button
+              type="button"
+              onClick={dismissHint}
+              className="focus-visible:ring-ring/50 min-h-11 rounded-full px-3 text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              Dismiss
+            </button>
+          </aside>
+        ) : null}
 
         <TodayReminderFallback />
         <PushPermissionNudge />

@@ -1,6 +1,6 @@
 import type { GoalDto } from "@mostly/api/routers/goals";
 import type { Cadence, Weekday } from "@mostly/domain";
-import { normalizeCadence, sameCadence } from "@mostly/domain";
+import { sameCadence } from "@mostly/domain";
 import { Button } from "@mostly/ui/components/button";
 import { Input } from "@mostly/ui/components/input";
 import { Label } from "@mostly/ui/components/label";
@@ -14,7 +14,6 @@ import {
   GOAL_COLORS,
   PRIORITIES,
   PRIORITY_LABELS,
-  WEEKDAYS,
   defaultStartDate,
   effectiveCadence,
   formatDayMonth,
@@ -22,6 +21,8 @@ import {
   localToday,
 } from "@/lib/goals";
 import { orpc } from "@/utils/orpc";
+
+import { CadenceFields, cadenceFromValue } from "./cadence-fields";
 
 const ARCHIVE_COPY =
   "Ends this goal. It stays in Today for the rest of today, then leaves current stats. History is kept and read-only from the next day. Correct details before archiving. You can't unarchive; create a new goal to resume.";
@@ -60,15 +61,12 @@ const initialForm = (goal: GoalDto | null): FormState => {
   };
 };
 
-const selectedCadence = (form: FormState): Cadence => {
-  if (form.cadenceType === "weekdays") {
-    return normalizeCadence({ type: "weekdays", weekdays: form.weekdays });
-  }
-  if (form.cadenceType === "weekly_target") {
-    return { type: "weekly_target", target: form.weeklyTarget };
-  }
-  return { type: "daily" };
-};
+const selectedCadence = (form: FormState): Cadence =>
+  cadenceFromValue({
+    type: form.cadenceType,
+    weekdays: form.weekdays,
+    target: form.weeklyTarget,
+  });
 
 const validateForm = (form: FormState, today: string): FormError => {
   const name = form.name.trim();
@@ -85,12 +83,6 @@ const validateForm = (form: FormState, today: string): FormError => {
     };
   }
   return null;
-};
-
-const helperCopy: Record<CadenceType, string> = {
-  daily: "Expected every day.",
-  weekdays: "Only these days count. Other days are free.",
-  weekly_target: "Any days count. The week is met when you reach N.",
 };
 
 const EmojiPicker = ({
@@ -215,116 +207,6 @@ const PriorityPicker = ({
     </div>
   </fieldset>
 );
-
-const CadencePicker = ({
-  fieldId,
-  form,
-  disabled,
-  changed,
-  error,
-  onChange,
-}: {
-  fieldId: string;
-  form: FormState;
-  disabled: boolean;
-  changed: boolean;
-  error: string | null;
-  onChange: (patch: Partial<FormState>) => void;
-}) => {
-  const toggleWeekday = (day: Weekday) =>
-    onChange({
-      weekdays: form.weekdays.includes(day)
-        ? form.weekdays.filter((value) => value !== day)
-        : [...form.weekdays, day].toSorted((a, b) => a - b),
-    });
-
-  return (
-    <fieldset disabled={disabled}>
-      <legend className="text-sm font-medium">Cadence</legend>
-      <div className="mt-2 grid gap-2 sm:grid-cols-3">
-        {(
-          [
-            { value: "daily", label: "Daily" },
-            { value: "weekdays", label: "Specific days" },
-            { value: "weekly_target", label: "N times per week" },
-          ] as const
-        ).map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={form.cadenceType === option.value}
-            onClick={() => onChange({ cadenceType: option.value })}
-            className={cn(
-              "border-border min-h-11 rounded-full border px-3 text-sm",
-              form.cadenceType === option.value &&
-                "bg-primary text-primary-foreground border-primary"
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-      <p className="text-muted-foreground mt-2 text-sm">
-        {helperCopy[form.cadenceType]}
-      </p>
-
-      {form.cadenceType === "weekdays" ? (
-        <fieldset className="mt-3 flex flex-wrap gap-2">
-          <legend className="sr-only">Weekdays</legend>
-          {WEEKDAYS.map((day) => (
-            <button
-              key={day.value}
-              type="button"
-              aria-pressed={form.weekdays.includes(day.value)}
-              aria-label={day.label}
-              onClick={() => toggleWeekday(day.value)}
-              className={cn(
-                "border-border min-h-11 min-w-11 rounded-full border px-3 text-sm",
-                form.weekdays.includes(day.value) &&
-                  "bg-accent text-accent-foreground border-foreground/20"
-              )}
-            >
-              {day.short}
-            </button>
-          ))}
-        </fieldset>
-      ) : null}
-
-      {form.cadenceType === "weekly_target" ? (
-        <div className="mt-3 flex items-center gap-3">
-          <Label htmlFor={`${fieldId}-target`}>Times per week</Label>
-          <select
-            id={`${fieldId}-target`}
-            value={form.weeklyTarget}
-            onChange={(event) =>
-              onChange({ weeklyTarget: Number(event.target.value) })
-            }
-            className="border-input bg-background h-11 rounded-full border px-3 text-base"
-          >
-            {[1, 2, 3, 4, 5, 6, 7].map((target) => (
-              <option key={target} value={target}>
-                {target}
-              </option>
-            ))}
-          </select>
-        </div>
-      ) : null}
-
-      {error ? (
-        <p role="alert" className="text-destructive mt-2 text-sm">
-          {error}
-        </p>
-      ) : null}
-
-      {changed ? (
-        <output className="bg-warm/10 text-foreground mt-3 block rounded-xl p-3 text-sm">
-          Past history stays. Your current streak resets only if the cadence
-          unit changes.
-        </output>
-      ) : null}
-    </fieldset>
-  );
-};
 
 const DangerZone = ({
   goal,
@@ -627,9 +509,13 @@ export const GoalEditor = ({
           disabled={archived}
           onChange={(priority) => updateForm({ priority })}
         />
-        <CadencePicker
+        <CadenceFields
           fieldId={fieldId}
-          form={form}
+          value={{
+            type: form.cadenceType,
+            weekdays: form.weekdays,
+            target: form.weeklyTarget,
+          }}
           disabled={archived}
           changed={cadenceChanged}
           error={
@@ -637,7 +523,13 @@ export const GoalEditor = ({
               ? validationError.message
               : null
           }
-          onChange={updateForm}
+          onChange={(value) =>
+            updateForm({
+              cadenceType: value.type,
+              weekdays: value.weekdays,
+              weeklyTarget: value.target,
+            })
+          }
         />
 
         <div className="space-y-2">

@@ -17,6 +17,9 @@ export const user = sqliteTable("user", {
     .notNull()
     .default(false),
   reminderTime: text("reminder_time").notNull().default("21:30"),
+  onboardingCompletedAt: integer("onboarding_completed_at", {
+    mode: "timestamp_ms",
+  }),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
