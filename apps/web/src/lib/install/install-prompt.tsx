@@ -150,7 +150,7 @@ export const InstallPrompt = () => {
   return (
     <aside
       aria-labelledby="install-prompt-heading"
-      className="border-b bg-[color-mix(in_oklch,var(--accent),var(--background)_70%)]"
+      className="bg-accent/40 border-b"
     >
       <div className="mx-auto flex w-full max-w-[960px] flex-wrap items-start gap-3 px-4 py-3">
         <div className="min-w-0 flex-1">
