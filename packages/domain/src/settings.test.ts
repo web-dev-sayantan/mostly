@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { planSettingChange, settingsForDate } from "./settings";
+import {
+  planSettingChange,
+  resolveSettingsForNow,
+  settingsForDate,
+  skippedDatesForTimeZoneChange,
+} from "./settings";
 import type { SettingVersion } from "./settings";
 
 const versions: SettingVersion[] = [
@@ -54,6 +59,72 @@ describe("settingsForDate", () => {
       timeZone: "UTC",
     });
     expect(settingsForDate([], "2026-10-20")).toBeUndefined();
+  });
+});
+
+describe("resolveSettingsForNow", () => {
+  it("keeps the current day closed under the old rollover on a 4 to 6 transition", () => {
+    const history: SettingVersion[] = [
+      {
+        effectiveFrom: "2026-10-01",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 4,
+      },
+      {
+        effectiveFrom: "2026-10-22",
+        timeZone: "UTC",
+        weekStartsOn: 1,
+        dayRolloverHour: 6,
+      },
+    ];
+    const hint = { timeZone: "UTC", rolloverHour: 4 };
+
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-22T03:30:00Z"), hint)
+    ).toMatchObject({ today: "2026-10-21" });
+    // 04:30 is past the old rollover: the new day opens under the old rule
+    // and the 6 AM rollover applies from the following day.
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-22T04:30:00Z"), hint)
+    ).toMatchObject({ today: "2026-10-22" });
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-22T05:30:00Z"), hint)
+    ).toMatchObject({ today: "2026-10-22" });
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-23T04:30:00Z"), {
+        timeZone: "UTC",
+        rolloverHour: 6,
+      })
+    ).toMatchObject({ today: "2026-10-22" });
+    expect(
+      resolveSettingsForNow(history, new Date("2026-10-23T06:00:00Z"), {
+        timeZone: "UTC",
+        rolloverHour: 6,
+      })
+    ).toMatchObject({ today: "2026-10-23" });
+  });
+});
+
+describe("skippedDatesForTimeZoneChange", () => {
+  it("records the date a dateline jump forward never produces", () => {
+    const dates = skippedDatesForTimeZoneChange({
+      now: new Date("2026-10-21T00:00:00Z"),
+      current: { timeZone: "Pacific/Pago_Pago", rolloverHour: 4 },
+      next: { timeZone: "Pacific/Kiritimati", rolloverHour: 4 },
+    });
+
+    expect(dates).toEqual(["2026-10-21"]);
+  });
+
+  it("does not skip a date when the change repeats a local day", () => {
+    const dates = skippedDatesForTimeZoneChange({
+      now: new Date("2026-10-22T00:00:00Z"),
+      current: { timeZone: "Pacific/Kiritimati", rolloverHour: 4 },
+      next: { timeZone: "Pacific/Pago_Pago", rolloverHour: 4 },
+    });
+
+    expect(dates).toEqual([]);
   });
 });
 

@@ -12,10 +12,13 @@ export {
   isBeforeRollover,
   isWithinLastLogicalDays,
   logicalDate,
+  nextLogicalBoundary,
   weekEndOf,
   weekStartOf,
   weekdayOf,
 } from "./logical-day";
+export type { Priority } from "./priority";
+export { comparePriority, PRIORITY_RANK } from "./priority";
 export type {
   ReminderDue,
   ReminderGoal,
@@ -76,7 +79,14 @@ export type {
   SettingValues,
   SettingVersion,
 } from "./settings";
-export { planSettingChange, settingsForDate } from "./settings";
+export {
+  planSettingChange,
+  resolveSettingsForNow,
+  settingsForDate,
+  skippedDatesForTimeZoneChange,
+  skippedDatesOf,
+  weekStartsOnFor,
+} from "./settings";
 export type {
   GoalConsistency,
   GoalDay,

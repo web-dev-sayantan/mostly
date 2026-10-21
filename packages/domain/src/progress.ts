@@ -3,6 +3,7 @@ import { isGoalActiveOn, weeklyOutcome } from "./day";
 import { addLogicalDays, weekEndOf, weekStartOf } from "./logical-day";
 import type { Cadence, ScheduleVersion } from "./schedule";
 import { isExpectedOn, resolveSchedule } from "./schedule";
+import { weekStartsOnFor } from "./settings";
 import type {
   GoalConsistency,
   GoalMinutes,
@@ -131,30 +132,44 @@ export interface BuildProgressInput {
   settings: readonly ProgressSettingsVersion[];
   today: string;
   range: ProgressRange;
+  skippedDates?: readonly string[];
 }
 
 const HEATMAP_WEEKS = 12;
 const CARD_DAYS = 7;
 const CARD_WEEKS = 7;
 
-const currentWeekStartsOn = (
+interface WeekSegment {
+  start: string;
+  end: string;
+  transition: boolean;
+}
+
+/** Split a range into weeks using the week-start setting in effect at each start. */
+const weekSegments = (
   settings: readonly ProgressSettingsVersion[],
-  date: string
-): number => {
-  let effective: ProgressSettingsVersion | undefined;
-  let earliest: ProgressSettingsVersion | undefined;
-  for (const version of settings) {
-    if (
-      version.effectiveFrom <= date &&
-      (!effective || version.effectiveFrom >= effective.effectiveFrom)
-    ) {
-      effective = version;
-    }
-    if (!earliest || version.effectiveFrom < earliest.effectiveFrom) {
-      earliest = version;
-    }
+  from: string,
+  to: string
+): WeekSegment[] => {
+  const segments: WeekSegment[] = [];
+  let cursor = weekStartOf(from, weekStartsOnFor(settings, from));
+
+  while (cursor <= to) {
+    const weekStartsOn = weekStartsOnFor(settings, cursor);
+    const naturalEnd = weekEndOf(cursor, weekStartsOn);
+    const nextStartsOn = weekStartsOnFor(
+      settings,
+      addLogicalDays(naturalEnd, 1)
+    );
+    const transition =
+      nextStartsOn !== weekStartsOn &&
+      weekStartOf(naturalEnd, nextStartsOn) === naturalEnd;
+    const end = transition ? addLogicalDays(naturalEnd, -1) : naturalEnd;
+    segments.push({ start: cursor, end, transition });
+    cursor = addLogicalDays(end, 1);
   }
-  return effective?.weekStartsOn ?? earliest?.weekStartsOn ?? 1;
+
+  return segments;
 };
 
 const cadenceOn = (goal: ProgressGoal, date: string): Cadence | null =>
@@ -178,19 +193,30 @@ const dateDistance = (start: string, end: string): number =>
 const activeDaysInWeek = (
   goal: ProgressGoal,
   weekStart: string,
-  weekEnd: string
+  weekEnd: string,
+  skipped: ReadonlySet<string>
 ): number => {
   const start = goal.startDate > weekStart ? goal.startDate : weekStart;
   const end =
     goal.archivedOn && goal.archivedOn < weekEnd ? goal.archivedOn : weekEnd;
-  return end >= start ? dateDistance(start, end) : 0;
+  if (end < start) {
+    return 0;
+  }
+  const skippedInRange = [...skipped].filter(
+    (date) => date >= start && date <= end
+  ).length;
+  return Math.max(0, dateDistance(start, end) - skippedInRange);
 };
 
 const sessionDatesFor = (
-  sessions: readonly ProgressSession[]
+  sessions: readonly ProgressSession[],
+  skipped: ReadonlySet<string>
 ): Map<string, Set<string>> => {
   const byGoal = new Map<string, Set<string>>();
   for (const entry of sessions) {
+    if (skipped.has(entry.logicalDate)) {
+      continue;
+    }
     const dates = byGoal.get(entry.goalId) ?? new Set<string>();
     dates.add(entry.logicalDate);
     byGoal.set(entry.goalId, dates);
@@ -201,14 +227,15 @@ const sessionDatesFor = (
 const countSessions = (
   dates: ReadonlySet<string> | undefined,
   start: string,
-  end: string
+  end: string,
+  skipped: ReadonlySet<string>
 ): number => {
   if (!dates) {
     return 0;
   }
   let count = 0;
   for (const date of dates) {
-    if (date >= start && date <= end) {
+    if (date >= start && date <= end && !skipped.has(date)) {
       count += 1;
     }
   }
@@ -225,11 +252,13 @@ const dailyRangeCounts = ({
   dates,
   rangeStart,
   rangeEnd,
+  skipped,
 }: {
   goal: ProgressGoal;
   dates: ReadonlySet<string> | undefined;
   rangeStart: string;
   rangeEnd: string;
+  skipped: ReadonlySet<string>;
 }): UnitCounts => {
   const start = goal.startDate > rangeStart ? goal.startDate : rangeStart;
   const end =
@@ -238,6 +267,9 @@ const dailyRangeCounts = ({
   let done = 0;
 
   for (let date = start; date <= end; date = addLogicalDays(date, 1)) {
+    if (skipped.has(date)) {
+      continue;
+    }
     const cadence = cadenceOn(goal, date);
     if (!cadence || cadence.type === "weekly_target") {
       continue;
@@ -254,38 +286,39 @@ const dailyRangeCounts = ({
   return { done, expected };
 };
 
-// shortcut: progress weeks use the current week-start setting; historical changes are not replayed here.
 const weeklyRangeCounts = ({
   goal,
   dates,
   rangeStart,
   rangeEnd,
-  weekStartsOn,
+  settings,
+  skipped,
 }: {
   goal: ProgressGoal;
   dates: ReadonlySet<string> | undefined;
   rangeStart: string;
   rangeEnd: string;
-  weekStartsOn: number;
+  settings: readonly ProgressSettingsVersion[];
+  skipped: ReadonlySet<string>;
 }): UnitCounts => {
   let expected = 0;
   let done = 0;
-  let cursor = weekStartOf(rangeStart, weekStartsOn);
 
-  while (cursor <= rangeEnd) {
-    const weekEnd = weekEndOf(cursor, weekStartsOn);
-    const inRange = weekEnd <= rangeEnd && weekEnd >= rangeStart;
-    const cadence = inRange ? cadenceOn(goal, cursor) : null;
+  for (const week of weekSegments(settings, rangeStart, rangeEnd)) {
+    const inRange = week.end <= rangeEnd && week.end >= rangeStart;
+    const cadence =
+      inRange && !week.transition ? cadenceOn(goal, week.start) : null;
     if (cadence?.type === "weekly_target") {
-      const activeDays = activeDaysInWeek(goal, cursor, weekEnd);
+      const activeDays = activeDaysInWeek(goal, week.start, week.end, skipped);
       if (activeDays >= cadence.target) {
         expected += 1;
-        if (countSessions(dates, cursor, weekEnd) >= cadence.target) {
+        if (
+          countSessions(dates, week.start, week.end, skipped) >= cadence.target
+        ) {
           done += 1;
         }
       }
     }
-    cursor = addLogicalDays(cursor, 7);
   }
 
   return { done, expected };
@@ -296,13 +329,15 @@ const rangeConsistency = ({
   dates,
   today,
   range,
-  weekStartsOn,
+  settings,
+  skipped,
 }: {
   goal: ProgressGoal;
   dates: ReadonlySet<string> | undefined;
   today: string;
   range: ProgressRange;
-  weekStartsOn: number;
+  settings: readonly ProgressSettingsVersion[];
+  skipped: ReadonlySet<string>;
 }): GoalConsistency => {
   const rangeEnd = addLogicalDays(today, -1);
   const rangeStart = addLogicalDays(today, -range);
@@ -317,13 +352,14 @@ const rangeConsistency = ({
 
   const counts =
     unit === "day"
-      ? dailyRangeCounts({ goal, dates, rangeStart, rangeEnd })
+      ? dailyRangeCounts({ goal, dates, rangeStart, rangeEnd, skipped })
       : weeklyRangeCounts({
           goal,
           dates,
           rangeStart,
           rangeEnd,
-          weekStartsOn,
+          settings,
+          skipped,
         });
   const qualified =
     unit === "week" ? counts.expected >= 3 : counts.expected >= 7;
@@ -344,11 +380,13 @@ const heatmapDays = ({
   datesByGoal,
   today,
   weekStartsOn,
+  skipped,
 }: {
   goals: readonly ProgressGoal[];
   datesByGoal: ReadonlyMap<string, ReadonlySet<string>>;
   today: string;
   weekStartsOn: number;
+  skipped: ReadonlySet<string>;
 }): ProgressHeatmapDay[] => {
   const start = addLogicalDays(weekStartOf(today, weekStartsOn), -77);
   const days: ProgressHeatmapDay[] = [];
@@ -357,22 +395,24 @@ const heatmapDays = ({
     let expected = 0;
     let done = 0;
     let extras = 0;
-    for (const goal of goals) {
-      if (!isActiveOn(goal, date)) {
-        continue;
-      }
-      const cadence = cadenceOn(goal, date);
-      if (!cadence || cadence.type === "weekly_target") {
-        continue;
-      }
-      const logged = datesByGoal.get(goal.id)?.has(date) ?? false;
-      if (isExpectedOn(cadence, date)) {
-        expected += 1;
-        if (logged) {
-          done += 1;
+    if (!skipped.has(date)) {
+      for (const goal of goals) {
+        if (!isActiveOn(goal, date)) {
+          continue;
         }
-      } else if (logged) {
-        extras += 1;
+        const cadence = cadenceOn(goal, date);
+        if (!cadence || cadence.type === "weekly_target") {
+          continue;
+        }
+        const logged = datesByGoal.get(goal.id)?.has(date) ?? false;
+        if (isExpectedOn(cadence, date)) {
+          expected += 1;
+          if (logged) {
+            done += 1;
+          }
+        } else if (logged) {
+          extras += 1;
+        }
       }
     }
 
@@ -401,30 +441,33 @@ const weekCells = ({
   target,
   dates,
   today,
-  weekStartsOn,
+  settings,
   count,
+  skipped,
 }: {
   goal: ProgressGoal;
   target: number;
   dates: ReadonlySet<string> | undefined;
   today: string;
-  weekStartsOn: number;
+  settings: readonly ProgressSettingsVersion[];
   count: number;
+  skipped: ReadonlySet<string>;
 }): ProgressWeekCell[] => {
-  const currentStart = weekStartOf(today, weekStartsOn);
-  const firstStart = addLogicalDays(currentStart, -(count - 1) * 7);
+  const currentStart = weekStartOf(today, weekStartsOnFor(settings, today));
+  const firstStart = addLogicalDays(currentStart, -(count + 2) * 7);
+  const segments = weekSegments(settings, firstStart, today).slice(-count);
   const cells: ProgressWeekCell[] = [];
 
-  for (let index = 0; index < count; index += 1) {
-    const weekStart = addLogicalDays(firstStart, index * 7);
-    const weekEnd = addLogicalDays(weekStart, 6);
+  for (const segment of segments) {
+    const weekStart = segment.start;
+    const weekEnd = segment.end;
     const cadence = cadenceOn(goal, weekStart);
     const weekTarget =
       cadence?.type === "weekly_target" ? cadence.target : target;
-    const activeDays = activeDaysInWeek(goal, weekStart, weekEnd);
-    const sessions = countSessions(dates, weekStart, weekEnd);
+    const activeDays = activeDaysInWeek(goal, weekStart, weekEnd, skipped);
+    const sessions = countSessions(dates, weekStart, weekEnd, skipped);
     const outcome: WeeklyOutcome =
-      cadence?.type === "weekly_target"
+      cadence?.type === "weekly_target" && !segment.transition
         ? weeklyOutcome({
             target: cadence.target,
             sessions,
@@ -463,15 +506,21 @@ const cardDots = ({
   goal,
   dates,
   today,
+  skipped,
 }: {
   goal: ProgressGoal;
   dates: ReadonlySet<string> | undefined;
   today: string;
+  skipped: ReadonlySet<string>;
 }): ProgressDot[] => {
   const start = addLogicalDays(today, -(CARD_DAYS - 1));
   const dots: ProgressDot[] = [];
 
   for (let date = start; date <= today; date = addLogicalDays(date, 1)) {
+    if (skipped.has(date)) {
+      dots.push({ date, status: "none", extra: false });
+      continue;
+    }
     const cadence = cadenceOn(goal, date);
     const expected =
       isActiveOn(goal, date) &&
@@ -497,31 +546,35 @@ const todayProgress = ({
   goals,
   datesByGoal,
   today,
+  skipped,
 }: {
   goals: readonly ProgressGoal[];
   datesByGoal: ReadonlyMap<string, ReadonlySet<string>>;
   today: string;
+  skipped: ReadonlySet<string>;
 }): ProgressToday => {
   const goalsToday: ProgressTodayGoal[] = [];
 
-  for (const goal of goals) {
-    if (!isActiveOn(goal, today)) {
-      continue;
+  if (!skipped.has(today)) {
+    for (const goal of goals) {
+      if (!isActiveOn(goal, today)) {
+        continue;
+      }
+      const cadence = cadenceOn(goal, today);
+      if (!cadence || cadence.type === "weekly_target") {
+        continue;
+      }
+      if (!isExpectedOn(cadence, today)) {
+        continue;
+      }
+      goalsToday.push({
+        goalId: goal.id,
+        name: goal.name,
+        emoji: goal.emoji,
+        color: goal.color,
+        done: datesByGoal.get(goal.id)?.has(today) ?? false,
+      });
     }
-    const cadence = cadenceOn(goal, today);
-    if (!cadence || cadence.type === "weekly_target") {
-      continue;
-    }
-    if (!isExpectedOn(cadence, today)) {
-      continue;
-    }
-    goalsToday.push({
-      goalId: goal.id,
-      name: goal.name,
-      emoji: goal.emoji,
-      color: goal.color,
-      done: datesByGoal.get(goal.id)?.has(today) ?? false,
-    });
   }
 
   const done = goalsToday.filter((entry) => entry.done).length;
@@ -554,9 +607,11 @@ export const buildProgress = ({
   settings,
   today,
   range,
+  skippedDates = [],
 }: BuildProgressInput): ProgressResult => {
-  const weekStartsOn = currentWeekStartsOn(settings, today);
-  const datesByGoal = sessionDatesFor(sessions);
+  const skipped = new Set(skippedDates);
+  const weekStartsOn = weekStartsOnFor(settings, today);
+  const datesByGoal = sessionDatesFor(sessions, skipped);
   const activeGoals = goals.filter(
     (goal) =>
       goal.startDate <= today &&
@@ -564,7 +619,10 @@ export const buildProgress = ({
   );
   const rangeStart = addLogicalDays(today, -range);
   const rangeSessions = sessions.filter(
-    (entry) => entry.logicalDate >= rangeStart && entry.logicalDate < today
+    (entry) =>
+      !skipped.has(entry.logicalDate) &&
+      entry.logicalDate >= rangeStart &&
+      entry.logicalDate < today
   );
 
   const cards: ProgressGoalCard[] = activeGoals.map((goal) => {
@@ -575,13 +633,16 @@ export const buildProgress = ({
         scheduleVersions: goal.scheduleVersions,
       },
       sessions: sessions
-        .filter((entry) => entry.goalId === goal.id)
+        .filter(
+          (entry) => entry.goalId === goal.id && !skipped.has(entry.logicalDate)
+        )
         .map((entry) => ({
           logicalDate: entry.logicalDate,
           minutes: entry.minutes,
         })),
       settings,
       today,
+      skippedDates: [...skipped],
     });
     const unit = unitOn(goal, today);
     const cadence = cadenceOn(goal, today);
@@ -599,11 +660,17 @@ export const buildProgress = ({
         dates: datesByGoal.get(goal.id),
         today,
         range,
-        weekStartsOn,
+        settings,
+        skipped,
       }),
       days:
         unit === "day"
-          ? cardDots({ goal, dates: datesByGoal.get(goal.id), today })
+          ? cardDots({
+              goal,
+              dates: datesByGoal.get(goal.id),
+              today,
+              skipped,
+            })
           : [],
       weeks:
         unit === "week" && cadence?.type === "weekly_target"
@@ -612,8 +679,9 @@ export const buildProgress = ({
               target: cadence.target,
               dates: datesByGoal.get(goal.id),
               today,
-              weekStartsOn,
+              settings,
               count: CARD_WEEKS,
+              skipped,
             })
           : [],
     };
@@ -636,8 +704,9 @@ export const buildProgress = ({
         target: cadence.target,
         dates: datesByGoal.get(goal.id),
         today,
-        weekStartsOn,
+        settings,
         count: HEATMAP_WEEKS,
+        skipped,
       }),
     });
   }
@@ -647,7 +716,7 @@ export const buildProgress = ({
     range,
     weekStartsOn,
     empty: completedDaysSince(goals, today) < 7,
-    todayProgress: todayProgress({ goals, datesByGoal, today }),
+    todayProgress: todayProgress({ goals, datesByGoal, today, skipped }),
     hero: {
       consistency: overallConsistency(cards),
       sessions: rangeSessions.length,
@@ -660,6 +729,7 @@ export const buildProgress = ({
         datesByGoal,
         today,
         weekStartsOn,
+        skipped,
       }),
     },
     weekly,

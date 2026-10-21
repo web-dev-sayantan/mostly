@@ -14,6 +14,7 @@ export const userSettingVersion = sqliteTable(
     timeZone: text("timezone").notNull(),
     weekStartsOn: integer("week_starts_on").notNull().default(1),
     dayRolloverHour: integer("day_rollover_hour").notNull().default(4),
+    skippedDates: text("skipped_dates", { mode: "json" }).$type<string[]>(),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
       .notNull(),

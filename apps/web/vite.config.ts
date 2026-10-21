@@ -5,7 +5,8 @@ import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vite-plus";
 
 // Caddy publishes the dev server over Tailscale HTTPS (see the Homebrew Caddyfile).
-const tailscaleHost = "macbook.grouse-ph.ts.net";
+// Override the host when the machine's tailnet name differs.
+const tailscaleHost = process.env.TAILSCALE_HOST || "macbook.grouse-ph.ts.net";
 
 export default defineConfig({
   server: {

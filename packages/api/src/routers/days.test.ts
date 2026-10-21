@@ -218,7 +218,7 @@ describe("daysRouter", () => {
     expect(after.expectations).toEqual([]);
   });
 
-  it("returns extras for off-day sessions and candidates for unlogged off days", async () => {
+  it("returns extras for unscheduled day sessions and candidates for unlogged unscheduled days", async () => {
     const { alice, aliceClient } = await clients();
     const guitar = await createGoal(db, alice.user.id, {
       name: "Guitar",

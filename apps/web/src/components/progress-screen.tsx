@@ -12,6 +12,11 @@ import { cn } from "@mostly/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 
 import { PRIORITY_LABELS, formatDayMonth } from "@/lib/goals";
+import {
+  consistencyValue as formatConsistency,
+  formatMinutes,
+  NOT_SCORED_COPY,
+} from "@/lib/stats-format";
 
 import { ProgressHeatmap } from "./progress-heatmap";
 
@@ -44,21 +49,9 @@ const weekLabel = (week: ProgressWeekCell): string => {
     return `${week.sessions} of ${week.target} this week`;
   }
   if (week.status === "not_scored") {
-    return "Not enough days this week";
+    return NOT_SCORED_COPY;
   }
   return "No session";
-};
-
-const formatMinutes = (total: number): string => {
-  const hours = Math.floor(total / 60);
-  const minutes = total % 60;
-  if (hours === 0) {
-    return `${minutes} min`;
-  }
-  if (minutes === 0) {
-    return `${hours} h`;
-  }
-  return `${hours} h ${minutes} min`;
 };
 
 const streakCopy = (card: ProgressGoalCard): string => {
@@ -69,15 +62,8 @@ const streakCopy = (card: ProgressGoalCard): string => {
   return `${card.currentStreak} ${unit}${card.currentStreak === 1 ? "" : "s"} in a row`;
 };
 
-const consistencyValue = (card: ProgressGoalCard): string => {
-  if (card.consistency.percent !== null) {
-    return `${card.consistency.percent}%`;
-  }
-  if (card.consistency.expected === 0) {
-    return "Just started";
-  }
-  return `${card.consistency.done} of ${card.consistency.expected}`;
-};
+const consistencyValue = (card: ProgressGoalCard): string =>
+  formatConsistency(card.consistency);
 
 const WeekCells = ({
   weeks,

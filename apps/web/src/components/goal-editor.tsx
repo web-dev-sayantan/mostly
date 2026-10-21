@@ -18,7 +18,6 @@ import {
   effectiveCadence,
   formatDayMonth,
   isArchived,
-  localToday,
 } from "@/lib/goals";
 import { orpc } from "@/utils/orpc";
 
@@ -45,8 +44,7 @@ interface FormState {
   startDate: string;
 }
 
-const initialForm = (goal: GoalDto | null): FormState => {
-  const today = localToday();
+const initialForm = (goal: GoalDto | null, today: string): FormState => {
   const cadence = goal ? effectiveCadence(goal, today) : null;
 
   return {
@@ -57,7 +55,7 @@ const initialForm = (goal: GoalDto | null): FormState => {
     cadenceType: cadence?.type ?? "daily",
     weekdays: cadence?.type === "weekdays" ? cadence.weekdays : [1, 3, 5],
     weeklyTarget: cadence?.type === "weekly_target" ? cadence.target : 3,
-    startDate: goal?.startDate ?? defaultStartDate(),
+    startDate: goal?.startDate ?? defaultStartDate(today),
   };
 };
 
@@ -334,23 +332,181 @@ const DangerZone = ({
   );
 };
 
+const NameField = ({
+  form,
+  fieldId,
+  archived,
+  validationError,
+  nameRef,
+  updateForm,
+}: {
+  form: FormState;
+  fieldId: string;
+  archived: boolean;
+  validationError: FormError;
+  nameRef: React.RefObject<HTMLInputElement | null>;
+  updateForm: (patch: Partial<FormState>) => void;
+}) => (
+  <div className="space-y-2">
+    <Label htmlFor={`${fieldId}-name`}>Name</Label>
+    <Input
+      id={`${fieldId}-name`}
+      ref={nameRef}
+      value={form.name}
+      onChange={(event) => updateForm({ name: event.target.value })}
+      maxLength={40}
+      required
+      disabled={archived}
+      autoComplete="off"
+      aria-invalid={validationError?.field === "name"}
+      aria-describedby={
+        validationError?.field === "name" ? `${fieldId}-name-error` : undefined
+      }
+      className="h-11 text-base"
+    />
+    {validationError?.field === "name" ? (
+      <p
+        id={`${fieldId}-name-error`}
+        role="alert"
+        className="text-destructive text-sm"
+      >
+        {validationError.message}
+      </p>
+    ) : null}
+  </div>
+);
+
+const GoalFields = ({
+  form,
+  fieldId,
+  archived,
+  startLocked,
+  today,
+  validationError,
+  nameRef,
+  cadenceChanged,
+  updateForm,
+}: {
+  form: FormState;
+  fieldId: string;
+  archived: boolean;
+  startLocked: boolean;
+  today: string;
+  validationError: FormError;
+  nameRef: React.RefObject<HTMLInputElement | null>;
+  cadenceChanged: boolean;
+  updateForm: (patch: Partial<FormState>) => void;
+}) => (
+  <>
+    <NameField
+      form={form}
+      fieldId={fieldId}
+      archived={archived}
+      validationError={validationError}
+      nameRef={nameRef}
+      updateForm={updateForm}
+    />
+
+    <EmojiPicker
+      value={form.emoji}
+      disabled={archived}
+      onChange={(emoji) => updateForm({ emoji })}
+    />
+    <ColorPicker
+      value={form.color}
+      disabled={archived}
+      onChange={(color) => updateForm({ color })}
+    />
+    <PriorityPicker
+      value={form.priority}
+      disabled={archived}
+      onChange={(priority) => updateForm({ priority })}
+    />
+    <CadenceFields
+      fieldId={fieldId}
+      value={{
+        type: form.cadenceType,
+        weekdays: form.weekdays,
+        target: form.weeklyTarget,
+      }}
+      disabled={archived}
+      changed={cadenceChanged}
+      error={
+        validationError?.field === "cadence" ? validationError.message : null
+      }
+      onChange={(value) =>
+        updateForm({
+          cadenceType: value.type,
+          weekdays: value.weekdays,
+          weeklyTarget: value.target,
+        })
+      }
+    />
+
+    <div className="space-y-2">
+      <Label htmlFor={`${fieldId}-start`}>Start date</Label>
+      <Input
+        id={`${fieldId}-start`}
+        type="date"
+        value={form.startDate}
+        min={today}
+        disabled={archived || startLocked}
+        onChange={(event) => updateForm({ startDate: event.target.value })}
+        aria-invalid={validationError?.field === "startDate"}
+        aria-describedby={
+          validationError?.field === "startDate"
+            ? `${fieldId}-start-error`
+            : undefined
+        }
+        className="h-11 text-base"
+      />
+      {validationError?.field === "startDate" ? (
+        <p
+          id={`${fieldId}-start-error`}
+          role="alert"
+          className="text-destructive text-sm"
+        >
+          {validationError.message}
+        </p>
+      ) : null}
+      {startLocked && !archived ? (
+        <p className="text-muted-foreground text-sm">
+          Start date can&apos;t change after a goal has started.
+        </p>
+      ) : null}
+    </div>
+  </>
+);
+
+const cadenceChangedSince = (
+  goal: GoalDto | null,
+  today: string,
+  next: Cadence
+): boolean => {
+  if (!goal) {
+    return false;
+  }
+  const current = effectiveCadence(goal, today);
+  return current !== null && !sameCadence(current, next);
+};
+
 // The form reads better as one labelled sequence than as more one-off wrappers.
-// eslint-disable-next-line complexity
 export const GoalEditor = ({
   goal,
+  today,
   onClose,
   onDone,
   onDeleted,
 }: {
   goal: GoalDto | null;
+  today: string;
   onClose: () => void;
   onDone: () => void;
   onDeleted?: () => void;
 }) => {
-  const [form, setForm] = useState<FormState>(() => initialForm(goal));
+  const [form, setForm] = useState<FormState>(() => initialForm(goal, today));
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
   const [validationError, setValidationError] = useState<FormError>(null);
-  const today = localToday();
   const archived = goal ? isArchived(goal, today) : false;
   const startLocked = Boolean(goal && goal.startDate <= today);
   const fieldId = useId();
@@ -366,38 +522,38 @@ export const GoalEditor = ({
     }
   }, [archived]);
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: orpc.goals.list.key() });
+  const invalidate = async () => {
+    await queryClient.invalidateQueries({ queryKey: orpc.goals.list.key() });
   };
 
   const createGoal = useMutation(
     orpc.goals.create.mutationOptions({
-      onSuccess: () => {
-        invalidate();
+      onSuccess: async () => {
+        await invalidate();
         onDone();
       },
     })
   );
   const updateGoal = useMutation(
     orpc.goals.update.mutationOptions({
-      onSuccess: () => {
-        invalidate();
+      onSuccess: async () => {
+        await invalidate();
         onDone();
       },
     })
   );
   const archiveGoal = useMutation(
     orpc.goals.archive.mutationOptions({
-      onSuccess: () => {
-        invalidate();
+      onSuccess: async () => {
+        await invalidate();
         onDone();
       },
     })
   );
   const deleteGoal = useMutation(
     orpc.goals.delete.mutationOptions({
-      onSuccess: () => {
-        invalidate();
+      onSuccess: async () => {
+        await invalidate();
         if (onDeleted) {
           onDeleted();
           return;
@@ -415,10 +571,7 @@ export const GoalEditor = ({
     deleteGoal.error?.message ??
     null;
   const cadence = selectedCadence(form);
-  const current = goal ? effectiveCadence(goal, today) : null;
-  const cadenceChanged = Boolean(
-    goal && current && !sameCadence(current, cadence)
-  );
+  const cadenceChanged = cadenceChangedSince(goal, today, cadence);
 
   const updateForm = (patch: Partial<FormState>) =>
     setForm((currentForm) => ({ ...currentForm, ...patch }));
@@ -464,7 +617,7 @@ export const GoalEditor = ({
           tabIndex={-1}
           className="focus-visible:ring-ring min-w-0 rounded-lg text-lg font-medium break-words focus-visible:ring-2 focus-visible:outline-none"
         >
-          {goal ? goal.name : "New goal"}
+          {goal?.name ?? "New goal"}
         </h2>
         <Button
           type="button"
@@ -483,106 +636,17 @@ export const GoalEditor = ({
       ) : null}
 
       <form onSubmit={submit} className="mt-5 space-y-6" noValidate>
-        <div className="space-y-2">
-          <Label htmlFor={`${fieldId}-name`}>Name</Label>
-          <Input
-            id={`${fieldId}-name`}
-            ref={nameRef}
-            value={form.name}
-            onChange={(event) => updateForm({ name: event.target.value })}
-            maxLength={40}
-            required
-            disabled={archived}
-            autoComplete="off"
-            aria-invalid={validationError?.field === "name"}
-            aria-describedby={
-              validationError?.field === "name"
-                ? `${fieldId}-name-error`
-                : undefined
-            }
-            className="h-11 text-base"
-          />
-          {validationError?.field === "name" ? (
-            <p
-              id={`${fieldId}-name-error`}
-              role="alert"
-              className="text-destructive text-sm"
-            >
-              {validationError.message}
-            </p>
-          ) : null}
-        </div>
-
-        <EmojiPicker
-          value={form.emoji}
-          disabled={archived}
-          onChange={(emoji) => updateForm({ emoji })}
-        />
-        <ColorPicker
-          value={form.color}
-          disabled={archived}
-          onChange={(color) => updateForm({ color })}
-        />
-        <PriorityPicker
-          value={form.priority}
-          disabled={archived}
-          onChange={(priority) => updateForm({ priority })}
-        />
-        <CadenceFields
+        <GoalFields
+          form={form}
           fieldId={fieldId}
-          value={{
-            type: form.cadenceType,
-            weekdays: form.weekdays,
-            target: form.weeklyTarget,
-          }}
-          disabled={archived}
-          changed={cadenceChanged}
-          error={
-            validationError?.field === "cadence"
-              ? validationError.message
-              : null
-          }
-          onChange={(value) =>
-            updateForm({
-              cadenceType: value.type,
-              weekdays: value.weekdays,
-              weeklyTarget: value.target,
-            })
-          }
+          archived={archived}
+          startLocked={startLocked}
+          today={today}
+          validationError={validationError}
+          nameRef={nameRef}
+          cadenceChanged={cadenceChanged}
+          updateForm={updateForm}
         />
-
-        <div className="space-y-2">
-          <Label htmlFor={`${fieldId}-start`}>Start date</Label>
-          <Input
-            id={`${fieldId}-start`}
-            type="date"
-            value={form.startDate}
-            min={today}
-            disabled={archived || startLocked}
-            onChange={(event) => updateForm({ startDate: event.target.value })}
-            aria-invalid={validationError?.field === "startDate"}
-            aria-describedby={
-              validationError?.field === "startDate"
-                ? `${fieldId}-start-error`
-                : undefined
-            }
-            className="h-11 text-base"
-          />
-          {validationError?.field === "startDate" ? (
-            <p
-              id={`${fieldId}-start-error`}
-              role="alert"
-              className="text-destructive text-sm"
-            >
-              {validationError.message}
-            </p>
-          ) : null}
-          {startLocked && !archived ? (
-            <p className="text-muted-foreground text-sm">
-              Start date can&apos;t change after a goal has started.
-            </p>
-          ) : null}
-        </div>
 
         {mutationError ? (
           <p role="alert" className="text-destructive text-sm">

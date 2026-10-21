@@ -24,6 +24,17 @@ export const syncEngine = createSyncEngine({
     sync: (input) => client.sessions.sync(input),
   },
   isOnline: () => (typeof navigator === "undefined" ? false : navigator.onLine),
+  checkAccountDeleted: async () => {
+    const userId = offlineStore.getUserId();
+    if (!userId) {
+      return false;
+    }
+    const status = await client.account.status({ userId });
+    return status.deleted;
+  },
+  // The store drops sessions, queue, conflicts, and the day cache; the today
+  // cache holds goals and settings, so it is cleared here too.
+  onAccountDeleted: () => clearTodayCache(),
 });
 
 export const { markSessionDone } = offlineStore;

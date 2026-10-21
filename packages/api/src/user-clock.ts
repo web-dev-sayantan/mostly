@@ -1,7 +1,11 @@
 import type { Database } from "@mostly/db";
 import { user } from "@mostly/db/schema/auth";
 import { userSettingVersion } from "@mostly/db/schema/settings";
-import { logicalDate, settingsForDate } from "@mostly/domain";
+import {
+  logicalDate,
+  resolveSettingsForNow,
+  skippedDatesOf,
+} from "@mostly/domain";
 import { asc, eq } from "drizzle-orm";
 
 const DEFAULT_WEEK_STARTS_ON = 1;
@@ -12,6 +16,7 @@ export interface UserClock {
   today: string;
   weekStartsOn: number;
   history: { effectiveFrom: string; weekStartsOn: number }[];
+  skippedDates: string[];
 }
 
 /**
@@ -51,37 +56,34 @@ export const loadUserClock = async (
       today: logicalDate(now, { timeZone, rolloverHour }),
       weekStartsOn,
       history: [{ effectiveFrom: "0000-01-01", weekStartsOn }],
+      skippedDates: [],
     };
   }
 
-  const initial = cached?.timeZone
-    ? {
-        timeZone: cached.timeZone,
-        weekStartsOn: cached.weekStartsOn,
-        dayRolloverHour: cached.dayRolloverHour,
-      }
-    : first;
-  let today = logicalDate(now, {
-    timeZone: initial.timeZone,
-    rolloverHour: initial.dayRolloverHour,
-  });
-  let current = settingsForDate(history, today) ?? first;
-
-  const corrected = logicalDate(now, {
-    timeZone: current.timeZone,
-    rolloverHour: current.dayRolloverHour,
-  });
-  if (corrected !== today) {
-    current = settingsForDate(history, corrected) ?? current;
-    today = corrected;
+  const resolved = resolveSettingsForNow(
+    history,
+    now,
+    cached?.timeZone
+      ? {
+          timeZone: cached.timeZone,
+          rolloverHour: cached.dayRolloverHour,
+        }
+      : {
+          timeZone: first.timeZone,
+          rolloverHour: first.dayRolloverHour,
+        }
+  );
+  if (!resolved) {
+    throw new Error("Settings history is empty");
   }
 
   return {
-    today,
-    weekStartsOn: current.weekStartsOn,
+    today: resolved.today,
+    weekStartsOn: resolved.current.weekStartsOn,
     history: history.map((version) => ({
       effectiveFrom: version.effectiveFrom,
       weekStartsOn: version.weekStartsOn,
     })),
+    skippedDates: skippedDatesOf(history),
   };
 };

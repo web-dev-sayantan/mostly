@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { WEEKDAYS, formatDayMonth } from "@/lib/goals";
+import { NOT_SCORED_COPY } from "@/lib/stats-format";
 import { formatLogicalDate } from "@/lib/time";
 
 const DAY_OUTCOME: Record<GoalDayCellDto["status"], string> = {
@@ -19,7 +20,7 @@ const WEEK_OUTCOME: Record<GoalWeek["status"], string> = {
   met: "Met",
   missed: "Missed",
   in_progress: "In progress",
-  not_scored: "Not enough days this week",
+  not_scored: NOT_SCORED_COPY,
 };
 
 const dayOutcome = (day: GoalDayCellDto): string => {

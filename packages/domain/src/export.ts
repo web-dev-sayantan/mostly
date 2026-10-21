@@ -111,12 +111,16 @@ const sumMinutes = (day: readonly ExportSessionInput[]): number | null => {
 const dailyRows = (
   goal: ExportGoalInput,
   today: string,
-  byDate: SessionsByDate | undefined
+  byDate: SessionsByDate | undefined,
+  skipped: ReadonlySet<string>
 ): DailyOutcome[] => {
   const rows: DailyOutcome[] = [];
   const end = lastActiveDate(goal, today);
 
   for (let date = goal.startDate; date <= end; date = addLogicalDays(date, 1)) {
+    if (skipped.has(date)) {
+      continue;
+    }
     const cadence = resolveSchedule(goal.scheduleVersions, date);
     if (cadence?.type === "weekly_target") {
       continue;
@@ -184,7 +188,8 @@ const weeklyRows = (
   goal: ExportGoalInput,
   today: string,
   byDate: SessionsByDate | undefined,
-  settings: readonly SettingVersion[]
+  settings: readonly SettingVersion[],
+  skipped: ReadonlySet<string>
 ): WeeklyOutcome[] => {
   const rows: WeeklyOutcome[] = [];
   const end = lastActiveDate(goal, today);
@@ -215,6 +220,9 @@ const weeklyRows = (
         date <= activeEnd;
         date = addLogicalDays(date, 1)
       ) {
+        if (skipped.has(date)) {
+          continue;
+        }
         activeDays += 1;
         sessionCount += byDate?.get(date)?.length ?? 0;
       }
@@ -252,20 +260,23 @@ export const deriveOutcomes = ({
   sessions,
   today,
   settings,
+  skippedDates = [],
 }: {
   goals: readonly ExportGoalInput[];
   sessions: readonly ExportSessionInput[];
   today: string;
   settings: readonly SettingVersion[];
+  skippedDates?: readonly string[];
 }): DerivedOutcomes => {
+  const skipped = new Set(skippedDates);
   const grouped = groupSessions(sessions);
   const daily: DailyOutcome[] = [];
   const weekly: WeeklyOutcome[] = [];
 
   for (const goal of goals) {
     const byDate = grouped.get(goal.id);
-    daily.push(...dailyRows(goal, today, byDate));
-    weekly.push(...weeklyRows(goal, today, byDate, settings));
+    daily.push(...dailyRows(goal, today, byDate, skipped));
+    weekly.push(...weeklyRows(goal, today, byDate, settings, skipped));
   }
 
   return { daily, weekly };

@@ -2,6 +2,7 @@ import type { Database } from "@mostly/db";
 import { goal, goalScheduleVersion } from "@mostly/db/schema/goals";
 import type { Cadence, Weekday } from "@mostly/domain";
 import {
+  comparePriority,
   initialSchedule,
   isIsoDate,
   normalizeCadence,
@@ -11,6 +12,7 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 
+import { cadenceFromScheduleRow } from "../cadence";
 import {
   countGoalSessions,
   findOwnedGoal,
@@ -22,7 +24,7 @@ import { loadUserClock } from "../user-clock";
 
 type GoalRow = typeof goal.$inferSelect;
 type ScheduleRow = typeof goalScheduleVersion.$inferSelect;
-type Priority = GoalRow["priority"];
+export type Priority = GoalRow["priority"];
 
 export interface GoalScheduleVersionDto {
   id: string;
@@ -43,8 +45,6 @@ export interface GoalDto {
   sessionCount: number;
   scheduleVersions: GoalScheduleVersionDto[];
 }
-
-const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 const isWeekday = (value: number): value is Weekday => value >= 1 && value <= 7;
 
@@ -86,15 +86,7 @@ const toDomainCadence = (cadence: z.infer<typeof cadenceSchema>): Cadence => {
   return { type: "daily" };
 };
 
-const toCadence = (row: ScheduleRow): Cadence => {
-  if (row.cadenceType === "weekdays") {
-    return { type: "weekdays", weekdays: (row.weekdays ?? []) as Weekday[] };
-  }
-  if (row.cadenceType === "weekly_target") {
-    return { type: "weekly_target", target: row.weeklyTarget ?? 1 };
-  }
-  return { type: "daily" };
-};
+const toCadence = cadenceFromScheduleRow;
 
 const scheduleColumns = (cadence: Cadence) => ({
   cadenceType: cadence.type,
@@ -142,7 +134,7 @@ export const loadGoalDto = async (
   );
 
 const byPriorityThenCreation = (a: GoalDto, b: GoalDto) =>
-  PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+  comparePriority(a.priority, b.priority) ||
   a.createdAt.localeCompare(b.createdAt);
 
 const requireActiveForEdit = (row: GoalRow, today: string) => {

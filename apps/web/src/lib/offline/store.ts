@@ -63,6 +63,8 @@ export interface OfflineStore {
   getQueue: () => SessionOp[];
   getConflicts: () => SessionConflict[];
   getLastSyncedAt: () => number | null;
+  /** The account this device was last bound to, for delete detection. */
+  getUserId: () => string | null;
   /** True when this device belonged to another account and was cleared. */
   bindUser: (userId: string) => boolean;
   cacheServerSessions: (records: SessionRecord[]) => void;
@@ -359,6 +361,10 @@ export const createOfflineStore = (
       return meta.lastSyncedAt;
     },
 
+    getUserId() {
+      return meta.userId ?? null;
+    },
+
     bindUser(userId) {
       if (meta.userId === userId) {
         return false;
@@ -455,7 +461,7 @@ export const createOfflineStore = (
       );
 
       overlayPending();
-      meta = { lastSyncedAt: syncedAt };
+      meta = { ...meta, lastSyncedAt: syncedAt };
       persistSessions();
       persistQueue();
       persistConflicts();

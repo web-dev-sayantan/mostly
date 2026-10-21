@@ -38,25 +38,10 @@ export const requireWritableGoal = async (
   return row;
 };
 
-const hasSessionTable = async (db: Database) =>
-  Boolean(
-    await db.get<{ name: string }>(
-      sql`select name from sqlite_master where type = 'table' and name = 'session'`
-    )
-  );
-
-/**
- * The sessions table belongs to ticket 5. Until it exists this is 0, and it
- * starts counting without changes once that migration is merged.
- */
 export const countGoalSessions = async (
   db: Database,
   goalId: string
 ): Promise<number> => {
-  if (!(await hasSessionTable(db))) {
-    return 0;
-  }
-
   const row = await db.get<{ count: number }>(
     sql`select count(*) as count from session where goal_id = ${goalId} and deleted_at is null`
   );
@@ -70,10 +55,6 @@ export const tombstoneGoalSessions = async (
   goalId: string,
   now: Date
 ) => {
-  if (!(await hasSessionTable(db))) {
-    return;
-  }
-
   await db.run(
     sql`update session set deleted_at = ${now.getTime()}, updated_at = ${now.getTime()} where goal_id = ${goalId} and deleted_at is null`
   );

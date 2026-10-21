@@ -9,9 +9,10 @@ import { Textarea } from "@mostly/ui/components/textarea";
 import { cn } from "@mostly/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
+import type { LocalSession } from "@/lib/offline";
 import {
   cacheServerSessions,
   deleteLocalSession,
@@ -19,13 +20,17 @@ import {
   updateLocalSession,
   useLocalSessions,
 } from "@/lib/offline";
+import {
+  MINUTES_MAX,
+  MOOD_LABELS,
+  NOTE_MAX,
+  validateMinutes,
+  validateNote,
+} from "@/lib/session-details";
 import { formatLogicalDate } from "@/lib/time";
 
-const MOOD_LABELS: Record<Mood, string> = {
-  great: "Great",
-  meh: "Meh",
-  rough: "Rough",
-};
+const SAVE_DELAY_MS = 500;
+const SAVED_VISIBLE_MS = 1500;
 
 const detailSummary = (row: GoalRecentDayDto): string[] => {
   const parts: string[] = [];
@@ -40,6 +45,278 @@ const detailSummary = (row: GoalRecentDayDto): string[] => {
   }
   return parts;
 };
+
+const announceSaved = (
+  setSaved: (value: boolean) => void,
+  savedTimer: { current: ReturnType<typeof setTimeout> | null },
+  alive: { current: boolean }
+): void => {
+  setSaved(true);
+  if (savedTimer.current) {
+    clearTimeout(savedTimer.current);
+  }
+  savedTimer.current = setTimeout(() => {
+    if (alive.current) {
+      setSaved(false);
+    }
+  }, SAVED_VISIBLE_MS);
+};
+
+const initialDraft = (session: LocalSession | null, row: GoalRecentDayDto) => ({
+  minutes: session?.minutes?.toString() ?? row.minutes?.toString() ?? "",
+  note: session?.note ?? row.note ?? "",
+  mood: session?.mood ?? row.mood ?? null,
+});
+
+const useDayDetailsDraft = ({
+  session,
+  row,
+  onClose,
+}: {
+  session: LocalSession | null;
+  row: GoalRecentDayDto;
+  onClose: () => void;
+}) => {
+  const [draft, setDraft] = useState(() => initialDraft(session, row));
+  const [saved, setSaved] = useState(false);
+  const latest = useRef({ ...draft });
+  const dirty = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const alive = useRef(true);
+
+  const flush = useCallback(
+    (announce: boolean) => {
+      if (!dirty.current || !session) {
+        return;
+      }
+      const check = validateMinutes(latest.current.minutes);
+      const noteValue = validateNote(latest.current.note);
+      if (check.error || noteValue.error) {
+        return;
+      }
+      updateLocalSession(session.id, {
+        minutes: check.value,
+        note: noteValue.value,
+        mood: latest.current.mood,
+      });
+      dirty.current = false;
+      if (!announce || !alive.current) {
+        return;
+      }
+      announceSaved(setSaved, savedTimer, alive);
+    },
+    [session, setSaved]
+  );
+
+  const clearSavedTimer = useCallback(() => {
+    if (savedTimer.current) {
+      clearTimeout(savedTimer.current);
+    }
+  }, []);
+
+  const flushPending = useCallback(() => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    flush(false);
+  }, [flush]);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      clearSavedTimer();
+    };
+  }, [clearSavedTimer]);
+
+  useEffect(() => () => flushPending(), [flushPending]);
+
+  useEffect(() => {
+    const onHide = () => flushPending();
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, [flushPending]);
+
+  const scheduleSave = () => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      flush(true);
+    }, SAVE_DELAY_MS);
+  };
+
+  const changeMinutes = (value: string) => {
+    latest.current = { ...latest.current, minutes: value };
+    dirty.current = true;
+    setSaved(false);
+    setDraft((current) => ({ ...current, minutes: value }));
+    scheduleSave();
+  };
+
+  const changeNote = (value: string) => {
+    latest.current = { ...latest.current, note: value };
+    dirty.current = true;
+    setSaved(false);
+    setDraft((current) => ({ ...current, note: value }));
+    scheduleSave();
+  };
+
+  const changeMood = (value: Mood) => {
+    const next = draft.mood === value ? null : value;
+    latest.current = { ...latest.current, mood: next };
+    dirty.current = true;
+    setSaved(false);
+    setDraft((current) => ({ ...current, mood: next }));
+    scheduleSave();
+  };
+
+  const close = () => {
+    flushPending();
+    onClose();
+  };
+
+  return {
+    minutes: draft.minutes,
+    note: draft.note,
+    mood: draft.mood,
+    saved,
+    minutesCheck: validateMinutes(draft.minutes),
+    noteCheck: validateNote(draft.note),
+    changeMinutes,
+    changeNote,
+    changeMood,
+    close,
+  };
+};
+
+const DayDetailsForm = ({
+  headingId,
+  minutes,
+  note,
+  mood,
+  saved,
+  minutesCheck,
+  noteCheck,
+  changeMinutes,
+  changeNote,
+  changeMood,
+  onClose,
+  onDelete,
+}: {
+  headingId: string;
+  minutes: string;
+  note: string;
+  mood: Mood | null;
+  saved: boolean;
+  minutesCheck: ReturnType<typeof validateMinutes>;
+  noteCheck: ReturnType<typeof validateNote>;
+  changeMinutes: (value: string) => void;
+  changeNote: (value: string) => void;
+  changeMood: (value: Mood) => void;
+  onClose: () => void;
+  onDelete: () => void;
+}) => (
+  <div className="mt-4 grid gap-4">
+    <div className="grid gap-2 sm:max-w-[180px]">
+      <Label htmlFor={`${headingId}-minutes`}>Minutes</Label>
+      <Input
+        id={`${headingId}-minutes`}
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={MINUTES_MAX}
+        value={minutes}
+        onChange={(event) => changeMinutes(event.target.value)}
+        aria-invalid={Boolean(minutesCheck.error)}
+        aria-describedby={minutesCheck.error ? `${headingId}-error` : undefined}
+        className="h-11 text-base"
+      />
+      {minutesCheck.error ? (
+        <p
+          id={`${headingId}-error`}
+          role="alert"
+          className="text-destructive text-sm"
+        >
+          {minutesCheck.error}
+        </p>
+      ) : null}
+    </div>
+
+    <div className="grid gap-2">
+      <Label htmlFor={`${headingId}-note`}>Note (optional)</Label>
+      <Textarea
+        id={`${headingId}-note`}
+        value={note}
+        maxLength={NOTE_MAX}
+        onChange={(event) => changeNote(event.target.value)}
+        aria-invalid={Boolean(noteCheck.error)}
+        aria-describedby={
+          noteCheck.error ? `${headingId}-note-error` : undefined
+        }
+        className="min-h-24 text-base"
+      />
+      {noteCheck.error ? (
+        <p
+          id={`${headingId}-note-error`}
+          role="alert"
+          className="text-destructive text-sm"
+        >
+          {noteCheck.error}
+        </p>
+      ) : null}
+    </div>
+
+    <fieldset>
+      <legend className="text-sm font-medium">How did it feel?</legend>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {MOODS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={mood === option}
+            onClick={() => changeMood(option)}
+            className={cn(
+              "border-border focus-visible:ring-ring min-h-11 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
+              mood === option &&
+                "bg-primary text-primary-foreground border-primary"
+            )}
+          >
+            {MOOD_LABELS[option]}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+
+    <div className="flex flex-wrap items-center gap-2">
+      <output
+        aria-live="polite"
+        className="text-muted-foreground inline-block min-w-12 text-sm"
+      >
+        {saved ? "Saved" : ""}
+      </output>
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={onClose}
+        className="min-h-11 rounded-full px-4 text-sm"
+      >
+        Close
+      </Button>
+      <Button
+        type="button"
+        variant="destructive"
+        onClick={onDelete}
+        className="min-h-11 rounded-full px-4 text-sm"
+      >
+        Delete session
+      </Button>
+    </div>
+  </div>
+);
 
 const DayDetails = ({
   row,
@@ -62,40 +339,23 @@ const DayDetails = ({
   const session = sessions.find(
     (entry) => entry.goalId === goalId && entry.logicalDate === row.date
   );
-  const [minutes, setMinutes] = useState(
-    session?.minutes?.toString() ?? row.minutes?.toString() ?? ""
-  );
-  const [note, setNote] = useState(session?.note ?? row.note ?? "");
-  const [mood, setMood] = useState<Mood | null>(
-    session?.mood ?? row.mood ?? null
-  );
-  const [error, setError] = useState<string | null>(null);
   const headingId = `day-${row.date}`;
+  const {
+    minutes,
+    note,
+    mood,
+    saved,
+    minutesCheck,
+    noteCheck,
+    changeMinutes,
+    changeNote,
+    changeMood,
+    close,
+  } = useDayDetailsDraft({ session: session ?? null, row, onClose });
 
   useEffect(() => {
     initialFocus.current?.focus();
   }, [initialFocus]);
-
-  const save = () => {
-    const trimmed = minutes.trim();
-    const parsed = trimmed === "" ? null : Number(trimmed);
-    if (
-      parsed !== null &&
-      (!Number.isInteger(parsed) || parsed < 0 || parsed > 1440)
-    ) {
-      setError("Minutes must be a whole number from 0 to 1440.");
-      return;
-    }
-    if (!session) {
-      return;
-    }
-    updateLocalSession(session.id, {
-      minutes: parsed,
-      note: note.trim() === "" ? null : note,
-      mood,
-    });
-    onClose();
-  };
 
   const summary = detailSummary(row);
   let body: ReactNode;
@@ -114,86 +374,24 @@ const DayDetails = ({
     );
   } else if (session) {
     body = (
-      <div className="mt-4 grid gap-4">
-        <div className="grid gap-2 sm:max-w-[180px]">
-          <Label htmlFor={`${headingId}-minutes`}>Minutes</Label>
-          <Input
-            id={`${headingId}-minutes`}
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={1440}
-            value={minutes}
-            onChange={(event) => setMinutes(event.target.value)}
-            aria-invalid={Boolean(error)}
-            aria-describedby={error ? `${headingId}-error` : undefined}
-            className="h-11 text-base"
-          />
-          {error ? (
-            <p
-              id={`${headingId}-error`}
-              role="alert"
-              className="text-destructive text-sm"
-            >
-              {error}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="grid gap-2">
-          <Label htmlFor={`${headingId}-note`}>Note (optional)</Label>
-          <Textarea
-            id={`${headingId}-note`}
-            value={note}
-            maxLength={500}
-            onChange={(event) => setNote(event.target.value)}
-            className="min-h-24 text-base"
-          />
-        </div>
-
-        <fieldset>
-          <legend className="text-sm font-medium">How did it feel?</legend>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {MOODS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={mood === option}
-                onClick={() => setMood(mood === option ? null : option)}
-                className={cn(
-                  "border-border focus-visible:ring-ring min-h-11 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
-                  mood === option &&
-                    "bg-primary text-primary-foreground border-primary"
-                )}
-              >
-                {MOOD_LABELS[option]}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            onClick={save}
-            className="min-h-11 rounded-full px-5 text-sm"
-          >
-            Save details
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => {
-              deleteLocalSession(session.id);
-              onDeleted(row.date);
-              onClose();
-            }}
-            className="min-h-11 rounded-full px-4 text-sm"
-          >
-            Delete session
-          </Button>
-        </div>
-      </div>
+      <DayDetailsForm
+        headingId={headingId}
+        minutes={minutes}
+        note={note}
+        mood={mood}
+        saved={saved}
+        minutesCheck={minutesCheck}
+        noteCheck={noteCheck}
+        changeMinutes={changeMinutes}
+        changeNote={changeNote}
+        changeMood={changeMood}
+        onClose={close}
+        onDelete={() => {
+          deleteLocalSession(session.id);
+          onDeleted(row.date);
+          onClose();
+        }}
+      />
     );
   } else {
     body = (
@@ -232,7 +430,7 @@ const DayDetails = ({
         <Button
           type="button"
           variant="ghost"
-          onClick={onClose}
+          onClick={close}
           className="min-h-11 rounded-full px-3 text-sm"
         >
           Close

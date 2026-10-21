@@ -1,28 +1,27 @@
 import { reminderCopy } from "@mostly/domain";
 import { Button } from "@mostly/ui/components/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { AccountSection } from "@/components/account-section";
 import {
-  disablePushReminders,
   enablePushReminders,
-  isInstalledApp,
   localPushEndpoint,
   pushPermission,
-  pushPlatform,
-  REMINDER_NOTICE_KEY,
+  removePushSubscription,
   sendTestPush,
+  usePushDevice,
+  REMINDER_NOTICE_KEY,
 } from "@/lib/push";
-import type { PushPermission } from "@/lib/push";
+import type { PushPermission, PushPlatform } from "@/lib/push";
 import { deliveryStatusCopy } from "@/lib/reminder-copy";
 import { formatLogicalDate } from "@/lib/time";
 import { orpc } from "@/utils/orpc";
 
 const permissionCopy = (
   permission: PushPermission,
-  platform: ReturnType<typeof pushPlatform>,
+  platform: PushPlatform,
   installed: boolean,
   configured: boolean
 ): string => {
@@ -46,7 +45,7 @@ const permissionCopy = (
 
 const cannotTest = (
   permission: PushPermission,
-  platform: ReturnType<typeof pushPlatform>,
+  platform: PushPlatform,
   installed: boolean,
   configured: boolean
 ): boolean =>
@@ -112,22 +111,9 @@ export const ReminderSettings = () => {
   );
   const [testing, setTesting] = useState(false);
   const [working, setWorking] = useState(false);
-  const platform = pushPlatform();
-  const installed = isInstalledApp();
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      const value = await localPushEndpoint();
-      if (active) {
-        setEndpoint(value);
-      }
-    };
-    load();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const device = usePushDevice();
+  const { platform, installed } = device;
+  const currentEndpoint = endpoint ?? device.endpoint;
 
   const update = useMutation(
     orpc.reminders.update.mutationOptions({
@@ -159,7 +145,7 @@ export const ReminderSettings = () => {
       // The in-app reminder is the fallback when push cannot work here.
       await (enabled
         ? enablePushReminders(overview?.publicKey ?? undefined)
-        : disablePushReminders());
+        : removePushSubscription());
       await update.mutateAsync({ enabled });
       await refreshDevice();
     } catch {
@@ -196,7 +182,7 @@ export const ReminderSettings = () => {
     overview.openCount > 0 &&
     overview.deliveredToday?.status !== "sent" &&
     (overview.deliveredToday?.status === "failed" ||
-      !(permission === "granted" && endpoint));
+      !(permission === "granted" && currentEndpoint));
 
   return (
     <AccountSection id="reminder" title="Reminder">

@@ -5,14 +5,16 @@ import {
   addLogicalDays,
   logicalDate,
   planSettingChange,
+  resolveSettingsForNow,
   settingsForDate,
+  skippedDatesForTimeZoneChange,
 } from "@mostly/domain";
 import type { SettingValues } from "@mostly/domain";
 import { ORPCError } from "@orpc/server";
 import { and, asc, eq, gt, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { protectedProcedure } from "../index";
+import { protectedProcedure } from "../procedures";
 
 type SettingRow = typeof userSettingVersion.$inferSelect;
 
@@ -139,28 +141,20 @@ export const resolveCurrent = (
   now: Date,
   cached: SettingValues | null
 ) => {
-  const [earliest] = history;
-  if (!earliest) {
+  const resolved = resolveSettingsForNow(
+    history,
+    now,
+    cached
+      ? {
+          timeZone: cached.timeZone,
+          rolloverHour: cached.dayRolloverHour,
+        }
+      : null
+  );
+  if (!resolved) {
     throw new Error("Settings history is empty");
   }
-
-  const initial = cached ?? earliest;
-  let today = logicalDate(now, {
-    timeZone: initial.timeZone,
-    rolloverHour: initial.dayRolloverHour,
-  });
-  let current = settingsForDate(history, today) ?? earliest;
-
-  const corrected = logicalDate(now, {
-    timeZone: current.timeZone,
-    rolloverHour: current.dayRolloverHour,
-  });
-  if (corrected !== today) {
-    current = settingsForDate(history, corrected) ?? current;
-    today = corrected;
-  }
-
-  return { today, current };
+  return resolved;
 };
 
 /** Today under the user's settings, with sensible defaults before history exists. */
@@ -185,6 +179,7 @@ const toDto = (row: SettingRow) => ({
   timeZone: row.timeZone,
   weekStartsOn: row.weekStartsOn,
   dayRolloverHour: row.dayRolloverHour,
+  skippedDates: row.skippedDates ?? [],
 });
 
 export const settingsRouter = {
@@ -263,6 +258,21 @@ export const settingsRouter = {
         const effectiveDates = plan.versions.map(
           (version) => version.effectiveFrom
         );
+        const [first] = plan.versions;
+        const skippedDates =
+          plan.timeZoneChanged && first
+            ? skippedDatesForTimeZoneChange({
+                now,
+                current: {
+                  timeZone: current.timeZone,
+                  rolloverHour: current.dayRolloverHour,
+                },
+                next: {
+                  timeZone: first.timeZone,
+                  rolloverHour: first.dayRolloverHour,
+                },
+              })
+            : [];
         // A pending version on the same boundary is superseded, never a past version.
         await context.db
           .delete(userSettingVersion)
@@ -277,10 +287,11 @@ export const settingsRouter = {
         const inserted = await context.db
           .insert(userSettingVersion)
           .values(
-            plan.versions.map((version) => ({
+            plan.versions.map((version, index) => ({
               id: crypto.randomUUID(),
               userId,
               ...version,
+              skippedDates: index === 0 ? skippedDates : null,
               createdAt: now,
             }))
           )

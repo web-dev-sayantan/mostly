@@ -5,19 +5,24 @@ import { Input } from "@mostly/ui/components/input";
 import { Label } from "@mostly/ui/components/label";
 import { Textarea } from "@mostly/ui/components/textarea";
 import { cn } from "@mostly/ui/lib/utils";
-import { useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+
+import {
+  MINUTES_MAX,
+  MOOD_LABELS,
+  NOTE_MAX,
+  validateMinutes,
+  validateNote,
+} from "@/lib/session-details";
+
+export type { Mood } from "@mostly/domain";
+export { MOOD_LABELS } from "@/lib/session-details";
 
 export interface SessionDetailValues {
   minutes: number | null;
   note: string | null;
   mood: Mood | null;
 }
-
-export const MOOD_LABELS: Record<Mood, string> = {
-  great: "Great",
-  meh: "Meh",
-  rough: "Rough",
-};
 
 export const sessionSummary = (session: SessionDetailValues): string => {
   const parts: string[] = [];
@@ -53,7 +58,10 @@ export const SessionDetails = ({
   );
 };
 
-/** Minimal inline editor until the session details panel lands. */
+const SAVE_DELAY_MS = 500;
+const SAVED_VISIBLE_MS = 1500;
+
+/** Debounced inline editor: every valid change saves, and leaving flushes. */
 export const SessionDetailsEditor = ({
   session,
   onSave,
@@ -72,24 +80,127 @@ export const SessionDetailsEditor = ({
   );
   const [note, setNote] = useState(session.note ?? "");
   const [mood, setMood] = useState<Mood | null>(session.mood);
+  const [saved, setSaved] = useState(false);
   const [confirmingRemove, setConfirmingRemove] = useState(false);
+  const latest = useRef({
+    minutesText: session.minutes === null ? "" : String(session.minutes),
+    note: session.note ?? "",
+    mood: session.mood,
+  });
+  const dirty = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const alive = useRef(true);
+
+  const flush = useCallback(
+    (announce: boolean) => {
+      if (!dirty.current) {
+        return;
+      }
+
+      const minutesCheck = validateMinutes(latest.current.minutesText);
+      const noteCheck = validateNote(latest.current.note);
+      if (minutesCheck.error || noteCheck.error) {
+        return;
+      }
+
+      onSave({
+        minutes: minutesCheck.value,
+        note: noteCheck.value,
+        mood: latest.current.mood,
+      });
+      dirty.current = false;
+      if (!announce || !alive.current) {
+        return;
+      }
+
+      setSaved(true);
+      if (savedTimer.current) {
+        clearTimeout(savedTimer.current);
+      }
+      savedTimer.current = setTimeout(() => {
+        if (alive.current) {
+          setSaved(false);
+        }
+      }, SAVED_VISIBLE_MS);
+    },
+    [onSave]
+  );
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      if (savedTimer.current) {
+        clearTimeout(savedTimer.current);
+      }
+    };
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+      }
+      flush(false);
+    },
+    [flush]
+  );
+
+  useEffect(() => {
+    const onHide = () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      flush(false);
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, [flush]);
+
+  const scheduleSave = () => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
+    saveTimer.current = setTimeout(() => {
+      saveTimer.current = null;
+      flush(true);
+    }, SAVE_DELAY_MS);
+  };
+
+  const changeMinutes = (value: string) => {
+    latest.current = { ...latest.current, minutesText: value };
+    dirty.current = true;
+    setSaved(false);
+    setMinutes(value);
+    scheduleSave();
+  };
+
+  const changeNote = (value: string) => {
+    latest.current = { ...latest.current, note: value };
+    dirty.current = true;
+    setSaved(false);
+    setNote(value);
+    scheduleSave();
+  };
+
+  const changeMood = (value: Mood) => {
+    const next = mood === value ? null : value;
+    latest.current = { ...latest.current, mood: next };
+    dirty.current = true;
+    setSaved(false);
+    setMood(next);
+    scheduleSave();
+  };
+
+  const minutesCheck = validateMinutes(minutes);
+  const noteCheck = validateNote(note);
+  const minutesErrorId = `${minutesId}-error`;
+  const noteErrorId = `${noteId}-error`;
 
   return (
-    <form
-      className="grid gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const parsed = Number(minutes);
-        onSave({
-          minutes:
-            minutes.trim() === "" || Number.isNaN(parsed)
-              ? null
-              : Math.min(1440, Math.max(0, Math.trunc(parsed))),
-          note: note.trim() === "" ? null : note,
-          mood,
-        });
-      }}
-    >
+    <div className="grid gap-4">
       <div className="grid gap-2">
         <Label htmlFor={minutesId} className="text-sm font-medium">
           Minutes
@@ -99,12 +210,23 @@ export const SessionDetailsEditor = ({
           type="number"
           inputMode="numeric"
           min={0}
-          max={1440}
+          max={MINUTES_MAX}
           value={minutes}
-          onChange={(event) => setMinutes(event.target.value)}
+          onChange={(event) => changeMinutes(event.target.value)}
+          aria-invalid={Boolean(minutesCheck.error)}
+          aria-describedby={minutesCheck.error ? minutesErrorId : undefined}
           className="min-h-11 max-w-32 text-sm"
           autoFocus
         />
+        {minutesCheck.error ? (
+          <p
+            id={minutesErrorId}
+            role="alert"
+            className="text-destructive text-sm"
+          >
+            {minutesCheck.error}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-2">
@@ -114,11 +236,18 @@ export const SessionDetailsEditor = ({
         <Textarea
           id={noteId}
           value={note}
-          maxLength={500}
+          maxLength={NOTE_MAX}
           rows={3}
-          onChange={(event) => setNote(event.target.value)}
+          onChange={(event) => changeNote(event.target.value)}
+          aria-invalid={Boolean(noteCheck.error)}
+          aria-describedby={noteCheck.error ? noteErrorId : undefined}
           className="min-h-20 text-sm"
         />
+        {noteCheck.error ? (
+          <p id={noteErrorId} role="alert" className="text-destructive text-sm">
+            {noteCheck.error}
+          </p>
+        ) : null}
       </div>
 
       <fieldset>
@@ -129,7 +258,7 @@ export const SessionDetailsEditor = ({
               key={value}
               type="button"
               aria-pressed={mood === value}
-              onClick={() => setMood(mood === value ? null : value)}
+              onClick={() => changeMood(value)}
               className={cn(
                 "border-border hover:bg-muted focus-visible:ring-ring min-h-11 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
                 mood === value && "bg-accent border-foreground/40"
@@ -142,16 +271,26 @@ export const SessionDetailsEditor = ({
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" className="min-h-11 rounded-full px-4 text-sm">
-          Save
-        </Button>
+        <output
+          aria-live="polite"
+          className="text-muted-foreground inline-block min-w-12 text-sm"
+        >
+          {saved ? "Saved" : ""}
+        </output>
         <Button
           type="button"
           variant="ghost"
-          onClick={onCancel}
+          onClick={() => {
+            if (saveTimer.current) {
+              clearTimeout(saveTimer.current);
+              saveTimer.current = null;
+            }
+            flush(false);
+            onCancel();
+          }}
           className="min-h-11 rounded-full px-4 text-sm"
         >
-          Cancel
+          Close
         </Button>
         <span className="ml-auto">
           {confirmingRemove ? (
@@ -186,6 +325,6 @@ export const SessionDetailsEditor = ({
           )}
         </span>
       </div>
-    </form>
+    </div>
   );
 };

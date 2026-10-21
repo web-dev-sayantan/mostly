@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import { client } from "@/utils/orpc";
 
 import { detectInstallPlatform } from "./install/install";
@@ -6,6 +8,7 @@ export const REMINDER_NOTICE_KEY = "mostly:reminder-permission-noted";
 export const REMINDER_NUDGE_KEY = "mostly:reminder-nudge-dismissed";
 
 export type PushPermission = NotificationPermission | "unsupported";
+export type PushPlatform = "ios" | "android" | "desktop";
 
 export type PushEnableResult =
   | { ok: true; endpoint: string }
@@ -34,8 +37,7 @@ const isStandalone = (): boolean => {
 };
 
 export const isInstalledApp = isStandalone;
-
-export const pushPlatform = (): "ios" | "android" | "desktop" => {
+export const pushPlatform = (): PushPlatform => {
   if (typeof navigator === "undefined") {
     return "desktop";
   }
@@ -79,6 +81,69 @@ const currentSubscription = async () => {
 export const localPushEndpoint = async (): Promise<string | null> => {
   const subscription = await currentSubscription();
   return subscription?.endpoint ?? null;
+};
+
+export const isPushReady = ({
+  configured,
+  permission,
+  endpoint,
+  deliveredStatus,
+}: {
+  configured: boolean | undefined;
+  permission: PushPermission;
+  endpoint: string | null;
+  deliveredStatus: "sent" | "failed" | "suppressed" | null | undefined;
+}): boolean =>
+  Boolean(configured) &&
+  permission === "granted" &&
+  endpoint !== null &&
+  deliveredStatus !== "failed";
+
+/** True while the platform can still ask for permission in a user gesture. */
+export const canEnablePush = ({
+  configured,
+  permission,
+  platform,
+  installed,
+}: {
+  configured: boolean | undefined;
+  permission: PushPermission;
+  platform: ReturnType<typeof pushPlatform>;
+  installed: boolean;
+}): boolean =>
+  Boolean(configured) &&
+  permission === "default" &&
+  (platform !== "ios" || installed);
+
+/** The current device's subscription endpoint and permission state. */
+export const usePushDevice = (): {
+  endpoint: string | null;
+  permission: PushPermission;
+  platform: ReturnType<typeof pushPlatform>;
+  installed: boolean;
+} => {
+  const [endpoint, setEndpoint] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const value = await localPushEndpoint();
+      if (active) {
+        setEndpoint(value);
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return {
+    endpoint,
+    permission: pushPermission(),
+    platform: pushPlatform(),
+    installed: isInstalledApp(),
+  };
 };
 
 /**
@@ -160,8 +225,6 @@ export const removePushSubscription = async (): Promise<void> => {
     }
   }
 };
-
-export const disablePushReminders = removePushSubscription;
 
 export const sendTestPush = async (): Promise<PushEnableResult> => {
   const enabled = await enablePushReminders();

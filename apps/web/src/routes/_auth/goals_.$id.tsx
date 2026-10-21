@@ -20,6 +20,10 @@ import {
 } from "@/lib/goals";
 import { useSyncStatus } from "@/lib/offline";
 import { useOnline } from "@/lib/online";
+import {
+  consistencyValue as formatConsistency,
+  formatMinutes,
+} from "@/lib/stats-format";
 import { orpc } from "@/utils/orpc";
 
 const unitCount = (count: number, unit: GoalDetailStatsDto["unit"]): string =>
@@ -36,28 +40,8 @@ const streakValue = (
 const bestValue = (count: number, unit: GoalDetailStatsDto["unit"]): string =>
   count === 0 ? "No streak yet" : `Best: ${unitCount(count, unit)}`;
 
-const consistencyValue = (stats: GoalDetailStatsDto): string => {
-  const { consistency } = stats;
-  if (consistency.percent !== null) {
-    return `${consistency.percent}%`;
-  }
-  if (consistency.expected === 0) {
-    return "Just started";
-  }
-  return `${consistency.done} of ${consistency.expected}`;
-};
-
-const formatMinutes = (total: number): string => {
-  const hours = Math.floor(total / 60);
-  const minutes = total % 60;
-  if (hours === 0) {
-    return `${minutes} min`;
-  }
-  if (minutes === 0) {
-    return `${hours} h`;
-  }
-  return `${hours} h ${minutes} min`;
-};
+const consistencyValue = (stats: GoalDetailStatsDto): string =>
+  formatConsistency(stats.consistency);
 
 const Stat = ({
   label,
@@ -198,6 +182,7 @@ const GoalDetailPage = () => {
       <GoalEditor
         key={goal.id}
         goal={goal}
+        today={today}
         onClose={closeEditor}
         onDone={() => {
           closeEditor();

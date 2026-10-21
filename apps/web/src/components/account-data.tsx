@@ -8,6 +8,7 @@ import { AccountSection } from "@/components/account-section";
 import { signInWithGoogle } from "@/lib/auth-client";
 import { CONFLICT_NOTICE_COPY, useSyncStatus } from "@/lib/offline";
 import type { SyncStatus } from "@/lib/offline";
+import { MOOD_LABELS } from "@/lib/session-details";
 import {
   finishAccountDeletion,
   finishSignOut,
@@ -64,7 +65,47 @@ const signIn = async () => {
   }
 };
 
+const losingEditCopy = (
+  local: SyncStatus["conflicts"][number]["local"]
+): string => {
+  if (local.deleted) {
+    return "Your edit removed this session.";
+  }
+  const details = [
+    local.minutes === null ? null : `${local.minutes} min`,
+    local.mood === null ? null : MOOD_LABELS[local.mood],
+  ].filter((part): part is string => part !== null);
+  return details.length > 0
+    ? `Your edit: ${details.join(" · ")}`
+    : "Your edit had no details.";
+};
+
 const SyncNotice = ({ status }: { status: SyncStatus }) => {
+  if (status.accountDeleted) {
+    return (
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-3 rounded-lg border p-3"
+      >
+        <div>
+          <p className="text-sm font-medium">This account was deleted</p>
+          <p className="text-muted-foreground text-sm">
+            Queued changes and saved data on this device were removed. Sign in
+            with another account to keep using Mostly.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 w-fit px-4 text-sm"
+          onClick={signIn}
+        >
+          Sign in
+        </Button>
+      </div>
+    );
+  }
+
   if (status.authExpired) {
     return (
       <div
@@ -106,16 +147,31 @@ const SyncNotice = ({ status }: { status: SyncStatus }) => {
           A newer edit from another device won. Your local copy stays on this
           device for seven days.
         </p>
-        <ul className="grid gap-1 text-sm">
-          {status.conflicts.map((conflict) => (
-            <li key={conflict.opId}>
-              {formatLogicalDate(conflict.logicalDate)} · kept until{" "}
-              {new Date(conflict.expiresAt).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-              })}
-            </li>
-          ))}
+        <ul className="grid gap-2 text-sm">
+          {status.conflicts.map((conflict) => {
+            const losing = conflict.local;
+
+            return (
+              <li key={conflict.opId} className="grid gap-1">
+                <span>
+                  {formatLogicalDate(conflict.logicalDate)} · kept until{" "}
+                  {new Date(conflict.expiresAt).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+                <span className="text-muted-foreground">
+                  {losingEditCopy(losing)}
+                </span>
+                {losing.note ? (
+                  <span className="break-words">
+                    <span className="text-muted-foreground">Note: </span>
+                    {losing.note}
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       </div>
     );
@@ -250,7 +306,9 @@ const DeleteAccountControl = ({
   const trigger = useRef<HTMLButtonElement>(null);
   const remove = useMutation(
     orpc.account.delete.mutationOptions({
-      onSuccess: () => finishAccountDeletion(),
+      onSuccess: async () => {
+        await finishAccountDeletion();
+      },
       onError: (error) => {
         toast.error(error.message || "Could not delete the account.");
       },

@@ -283,4 +283,38 @@ describe("deriveOutcomes", () => {
       })
     ).toEqual({ daily: [], weekly: [] });
   });
+
+  it("leaves a skipped date out of daily rows and weekly active days", () => {
+    const dailyOutcomes = deriveOutcomes({
+      goals: [goal()],
+      sessions: [session("2026-10-20")],
+      today: "2026-10-22",
+      settings: [],
+      skippedDates: ["2026-10-20"],
+    });
+    const weeklyOutcomes = deriveOutcomes({
+      goals: [
+        goal({
+          id: "weekly",
+          startDate: "2026-10-19",
+          scheduleVersions: [
+            version("2026-10-19", { type: "weekly_target", target: 3 }),
+          ],
+        }),
+      ],
+      sessions: [],
+      today: "2026-10-22",
+      settings: [],
+      skippedDates: ["2026-10-20"],
+    });
+
+    expect(dailyOutcomes.daily.map((row) => row.date)).toEqual([
+      "2026-10-19",
+      "2026-10-21",
+      "2026-10-22",
+    ]);
+    expect(weeklyOutcomes.weekly).toEqual([
+      expect.objectContaining({ activeDays: 3, sessions: 0 }),
+    ]);
+  });
 });

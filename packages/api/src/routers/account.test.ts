@@ -343,5 +343,12 @@ describe("account router", () => {
     await expect(bobClient.account.export()).resolves.toMatchObject({
       user: { name: "Bob", email: "bob@example.com" },
     });
+
+    await expect(
+      anonymousClient.account.status({ userId: alice.user.id })
+    ).resolves.toEqual({ deleted: true });
+    await expect(
+      anonymousClient.account.status({ userId: bob.user.id })
+    ).resolves.toEqual({ deleted: false });
   });
 });
