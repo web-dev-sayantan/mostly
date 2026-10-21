@@ -4,7 +4,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { DataControls } from "@/components/account-data";
+import { AccountSection } from "@/components/account-section";
 import { useTheme } from "@/components/theme-provider";
+import { APP_VERSION, SOURCE_URL } from "@/lib/app-info";
+import { authClient } from "@/lib/auth-client";
 import {
   detectedTimeZone,
   formatLogicalDate,
@@ -23,11 +27,135 @@ const themes = [
   { value: "dark", label: "Dark" },
 ] as const;
 
+const Profile = () => {
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending || !session) {
+    return (
+      <AccountSection id="profile" title="Profile">
+        <p className="text-muted-foreground text-sm">Loading profile.</p>
+      </AccountSection>
+    );
+  }
+
+  const { user } = session;
+  const name = user.name || user.email;
+
+  return (
+    <AccountSection id="profile" title="Profile">
+      <div className="flex items-center gap-3">
+        {user.image ? (
+          <img
+            src={user.image}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="border-border size-12 rounded-full border"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="bg-accent text-accent-foreground grid size-12 place-items-center rounded-full text-lg"
+          >
+            {name.charAt(0).toUpperCase()}
+          </span>
+        )}
+        <div className="min-w-0">
+          <p className="truncate text-base font-medium">{name}</p>
+          <p className="text-muted-foreground truncate text-sm">{user.email}</p>
+        </div>
+      </div>
+    </AccountSection>
+  );
+};
+
+const Reminder = () => (
+  <AccountSection id="reminder" title="Reminder">
+    <p className="text-sm">One reminder a day. No streak guilt, no spam.</p>
+    <p className="text-muted-foreground text-sm">
+      Reminder controls arrive with notifications. The default is 9:30 PM local
+      time.
+    </p>
+  </AccountSection>
+);
+
+const Install = () => (
+  <AccountSection id="install" title="Install">
+    <p className="text-sm">Add Mostly to your home screen.</p>
+    <ul className="grid gap-3 text-sm">
+      <li>
+        <span className="font-medium">Android</span>
+        <span className="text-muted-foreground block">
+          Open Mostly in Chrome, open the menu, then choose Add to Home screen.
+        </span>
+      </li>
+      <li>
+        <span className="font-medium">iPhone and iPad</span>
+        <span className="text-muted-foreground block">
+          Open Mostly in Safari, tap Share, then Add to Home Screen.
+        </span>
+      </li>
+      <li>
+        <span className="font-medium">Desktop</span>
+        <span className="text-muted-foreground block">
+          Use the install icon in your browser&apos;s address bar, or choose
+          Install app from the menu.
+        </span>
+      </li>
+    </ul>
+  </AccountSection>
+);
+
+const Privacy = () => (
+  <AccountSection id="privacy" title="Privacy">
+    <p className="text-sm">
+      Your goals stay yours. No feed, no sharing, and no analytics or trackers.
+      Notes and moods are never logged.
+    </p>
+    <a
+      href="/privacy"
+      className="focus-visible:ring-ring/50 inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+    >
+      Read the full privacy policy
+    </a>
+  </AccountSection>
+);
+
+const About = () => (
+  <AccountSection id="about" title="About">
+    <p className="text-sm">Mostly {APP_VERSION}</p>
+    <p className="text-muted-foreground text-sm">
+      A quiet record of what you did.
+    </p>
+    <div className="flex flex-wrap gap-4 text-sm">
+      <a
+        href="/licenses"
+        className="focus-visible:ring-ring/50 inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        Open-source licenses
+      </a>
+      <a
+        href={SOURCE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="focus-visible:ring-ring/50 inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        Source code
+      </a>
+    </div>
+  </AccountSection>
+);
+
 const AccountPage = () => (
   <section className="max-w-[720px] py-4">
     <h1 className="text-[28px] leading-tight font-medium">Account</h1>
     <div className="mt-6 grid gap-6">
+      <Profile />
+      <Reminder />
       <Preferences />
+      <DataControls />
+      <Install />
+      <Privacy />
+      <About />
     </div>
   </section>
 );
@@ -62,97 +190,87 @@ const Preferences = () => {
     settingsQuery.data?.history.at(-1) ?? settingsQuery.data?.current;
 
   return (
-    <section
-      aria-labelledby="preferences-heading"
-      className="bg-card rounded-lg border"
-    >
-      <div className="border-b px-4 py-3">
-        <h2 id="preferences-heading" className="text-base font-medium">
-          Preferences
-        </h2>
-      </div>
-      <div className="grid gap-6 p-4">
-        {settingsQuery.isPending ? (
-          <p className="text-muted-foreground text-sm">Loading settings.</p>
-        ) : null}
-        {settingsQuery.isError ? (
-          <div className="grid gap-3">
-            <p className="text-sm">Could not load settings.</p>
-            <Button
-              variant="outline"
-              className="min-h-11 w-fit px-4 text-sm"
-              onClick={() => settingsQuery.refetch()}
-            >
-              Try again
-            </Button>
-          </div>
-        ) : null}
-        {settings ? (
-          <>
-            <ThemePreference />
-            <fieldset className="grid gap-2">
-              <legend className="text-sm font-medium">Week starts</legend>
-              <div className="flex flex-wrap gap-2">
-                {weekStarts.map((option) => (
-                  <label
-                    key={option.value}
-                    className="border-border hover:bg-muted has-[:checked]:border-primary has-[:checked]:bg-accent has-[:focus-visible]:ring-ring/50 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm has-[:focus-visible]:ring-2"
-                  >
-                    <input
-                      type="radio"
-                      name="week-starts-on"
-                      value={option.value}
-                      checked={settings.weekStartsOn === option.value}
-                      disabled={update.isPending}
-                      onChange={() =>
-                        update.mutate({ weekStartsOn: option.value })
-                      }
-                      className="size-4"
-                    />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-              <p className="text-muted-foreground text-sm">
-                Applies from the next week. Past weeks keep their start day.
-              </p>
-            </fieldset>
-
-            <div className="grid gap-2">
-              <label htmlFor="day-rollover" className="text-sm font-medium">
-                Day rollover
-              </label>
-              <select
-                id="day-rollover"
-                value={settings.dayRolloverHour}
-                disabled={update.isPending}
-                onChange={(event) =>
-                  update.mutate({ dayRolloverHour: Number(event.target.value) })
-                }
-                className="border-input bg-background min-h-11 w-full max-w-64 rounded-lg border px-3 text-sm"
-              >
-                {rolloverHours.map((hour) => (
-                  <option key={hour} value={hour}>
-                    {formatRolloverHour(hour)}
-                  </option>
-                ))}
-              </select>
-              <p className="text-muted-foreground text-sm">
-                Today closes under the current rollover. A new time applies from
-                the next day.
-              </p>
+    <AccountSection id="preferences" title="Preferences">
+      {settingsQuery.isPending ? (
+        <p className="text-muted-foreground text-sm">Loading settings.</p>
+      ) : null}
+      {settingsQuery.isError ? (
+        <div className="grid gap-3">
+          <p className="text-sm">Could not load settings.</p>
+          <Button
+            variant="outline"
+            className="min-h-11 w-fit px-4 text-sm"
+            onClick={() => settingsQuery.refetch()}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : null}
+      {settings ? (
+        <>
+          <ThemePreference />
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium">Week starts</legend>
+            <div className="flex flex-wrap gap-2">
+              {weekStarts.map((option) => (
+                <label
+                  key={option.value}
+                  className="border-border hover:bg-muted has-[:checked]:border-primary has-[:checked]:bg-accent has-[:focus-visible]:ring-ring/50 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm has-[:focus-visible]:ring-2"
+                >
+                  <input
+                    type="radio"
+                    name="week-starts-on"
+                    value={option.value}
+                    checked={settings.weekStartsOn === option.value}
+                    disabled={update.isPending}
+                    onChange={() =>
+                      update.mutate({ weekStartsOn: option.value })
+                    }
+                    className="size-4"
+                  />
+                  {option.label}
+                </label>
+              ))}
             </div>
+            <p className="text-muted-foreground text-sm">
+              Applies from the next week. Past weeks keep their start day.
+            </p>
+          </fieldset>
 
-            <TimeZonePreference
-              detected={timeZone}
-              currentTimeZone={settings.timeZone}
-              isSaving={update.isPending}
-              onSave={() => update.mutate({ timeZone, confirmTimeZone: true })}
-            />
-          </>
-        ) : null}
-      </div>
-    </section>
+          <div className="grid gap-2">
+            <label htmlFor="day-rollover" className="text-sm font-medium">
+              Day rollover
+            </label>
+            <select
+              id="day-rollover"
+              value={settings.dayRolloverHour}
+              disabled={update.isPending}
+              onChange={(event) =>
+                update.mutate({ dayRolloverHour: Number(event.target.value) })
+              }
+              className="border-input bg-background min-h-11 w-full max-w-64 rounded-lg border px-3 text-sm"
+            >
+              {rolloverHours.map((hour) => (
+                <option key={hour} value={hour}>
+                  {formatRolloverHour(hour)}
+                </option>
+              ))}
+            </select>
+            <p className="text-muted-foreground text-sm">
+              Today closes under the current rollover. A new time applies from
+              the next day.
+            </p>
+          </div>
+
+          <TimeZonePreference
+            detected={timeZone}
+            currentTimeZone={settings.timeZone}
+            isSaving={update.isPending}
+            onSave={() => update.mutate({ timeZone, confirmTimeZone: true })}
+          />
+        </>
+      ) : null}
+    </AccountSection>
   );
 };
 
