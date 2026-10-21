@@ -47,7 +47,7 @@ const GoalRow = ({
       <Link
         to="/goals/$id"
         params={{ id: goal.id }}
-        className="focus-visible:ring-ring/50 flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-3 focus-visible:ring-1 focus-visible:outline-none"
+        className="focus-visible:ring-ring flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-3 focus-visible:ring-1 focus-visible:outline-none"
       >
         <span
           aria-hidden="true"
@@ -183,7 +183,7 @@ const GoalsPage = () => {
                 aria-pressed={filter === option.value}
                 onClick={() => setFilter(option.value)}
                 className={cn(
-                  "focus-visible:ring-ring/50 min-h-11 rounded-full px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
+                  "focus-visible:ring-ring min-h-11 rounded-full px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
                   filter === option.value && "bg-accent text-accent-foreground"
                 )}
               >

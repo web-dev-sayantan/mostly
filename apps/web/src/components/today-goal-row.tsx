@@ -98,7 +98,7 @@ const CheckTarget = ({
       }
       aria-expanded={canEditDetails ? detailsOpen : undefined}
       aria-controls={canEditDetails ? `today-panel-${goal.id}` : undefined}
-      className="focus-visible:ring-ring/50 flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+      className="focus-visible:ring-ring flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
     >
       <span
         className={cn(
@@ -132,7 +132,7 @@ const UndoControl = ({
       type="button"
       onClick={onUndo}
       aria-label={`Undo ${goalName}`}
-      className="text-primary focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+      className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
     >
       Undo
     </button>
@@ -154,7 +154,7 @@ const AddDetails = ({
     aria-label={`Add details for ${goal.name}`}
     aria-expanded={detailsOpen}
     aria-controls={`today-panel-${goal.id}`}
-    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full px-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full px-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
   >
     Add details
   </button>
@@ -221,7 +221,7 @@ export const TodayGoalRow = ({
             }
             aria-expanded={detailsOpen}
             aria-controls={`today-panel-${goal.id}`}
-            className="focus-visible:ring-ring/50 flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
           >
             {content}
           </button>
@@ -343,7 +343,7 @@ export const WeeklyGoalRow = ({
             }
             aria-expanded={detailsOpen}
             aria-controls={`today-panel-${goal.id}`}
-            className="focus-visible:ring-ring/50 flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
           >
             {content}
           </button>
@@ -366,7 +366,7 @@ export const WeeklyGoalRow = ({
               type="button"
               onClick={() => onMarkDone(goal)}
               aria-label={`Log another session for ${goal.name}`}
-              className="border-border hover:bg-muted focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              className="border-border hover:bg-muted focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
             >
               Log another session
             </button>

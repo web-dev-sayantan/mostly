@@ -103,7 +103,7 @@ const Privacy = () => (
     </p>
     <a
       href="/privacy"
-      className="focus-visible:ring-ring/50 inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+      className="focus-visible:ring-ring inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
     >
       Read the full privacy policy
     </a>
@@ -119,7 +119,7 @@ const About = () => (
     <div className="flex flex-wrap gap-4 text-sm">
       <a
         href="/licenses"
-        className="focus-visible:ring-ring/50 inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
       >
         Open-source licenses
       </a>
@@ -127,7 +127,7 @@ const About = () => (
         href={SOURCE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="focus-visible:ring-ring/50 inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring inline-flex min-h-11 items-center underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
       >
         Source code
       </a>
@@ -207,7 +207,7 @@ const Preferences = () => {
               {weekStarts.map((option) => (
                 <label
                   key={option.value}
-                  className="border-border hover:bg-muted has-[:checked]:border-primary has-[:checked]:bg-accent has-[:focus-visible]:ring-ring/50 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm has-[:focus-visible]:ring-2"
+                  className="border-border hover:bg-muted has-[:checked]:border-primary has-[:checked]:bg-accent has-[:focus-visible]:ring-ring inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm has-[:focus-visible]:ring-2"
                 >
                   <input
                     type="radio"
@@ -277,7 +277,7 @@ const ThemePreference = () => {
         {themes.map((option) => (
           <label
             key={option.value}
-            className="border-border hover:bg-muted has-[:checked]:border-primary has-[:checked]:bg-accent has-[:focus-visible]:ring-ring/50 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm has-[:focus-visible]:ring-2"
+            className="border-border hover:bg-muted has-[:checked]:border-primary has-[:checked]:bg-accent has-[:focus-visible]:ring-ring inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm has-[:focus-visible]:ring-2"
           >
             <input
               type="radio"

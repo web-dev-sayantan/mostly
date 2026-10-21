@@ -80,7 +80,7 @@ export const CadenceFields = ({
             aria-pressed={value.type === option.value}
             onClick={() => onChange({ ...value, type: option.value })}
             className={cn(
-              "border-border focus-visible:ring-ring/50 min-h-11 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
+              "border-border focus-visible:ring-ring min-h-11 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
               value.type === option.value &&
                 "bg-primary text-primary-foreground border-primary"
             )}
@@ -104,7 +104,7 @@ export const CadenceFields = ({
               aria-label={day.label}
               onClick={() => toggleWeekday(day.value)}
               className={cn(
-                "border-border focus-visible:ring-ring/50 min-h-11 min-w-11 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
+                "border-border focus-visible:ring-ring min-h-11 min-w-11 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
                 value.weekdays.includes(day.value) &&
                   "bg-accent text-accent-foreground border-foreground/20"
               )}

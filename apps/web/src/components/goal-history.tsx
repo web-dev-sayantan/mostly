@@ -85,7 +85,7 @@ const DayTable = ({ days }: { days: GoalDayCellDto[] }) => (
               <Link
                 to="/day/$date"
                 params={{ date: day.date }}
-                className="hover:text-foreground text-muted-foreground focus-visible:ring-ring/50 inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:ring-1 focus-visible:outline-none"
+                className="hover:text-foreground text-muted-foreground focus-visible:ring-ring inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:ring-1 focus-visible:outline-none"
               >
                 {formatLogicalDate(day.date)}
               </Link>
@@ -133,7 +133,7 @@ const WeekTable = ({ weeks }: { weeks: GoalWeek[] }) => (
               <Link
                 to="/day/$date"
                 params={{ date: week.start }}
-                className="hover:text-foreground text-muted-foreground focus-visible:ring-ring/50 inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:ring-1 focus-visible:outline-none"
+                className="hover:text-foreground text-muted-foreground focus-visible:ring-ring inline-flex min-h-11 items-center underline-offset-4 hover:underline focus-visible:ring-1 focus-visible:outline-none"
               >
                 {formatDayMonth(week.start)} – {formatDayMonth(week.end)}
               </Link>

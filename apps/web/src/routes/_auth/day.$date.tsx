@@ -334,7 +334,7 @@ const DayRow = ({
       ref={row}
       id={`day-goal-${goal.id}`}
       tabIndex={-1}
-      className="bg-card focus-visible:ring-ring/50 rounded-2xl border focus-visible:ring-2 focus-visible:outline-none"
+      className="bg-card focus-visible:ring-ring rounded-2xl border focus-visible:ring-2 focus-visible:outline-none"
     >
       {session && editable ? (
         <button
@@ -344,7 +344,7 @@ const DayRow = ({
           aria-controls={editing ? `day-details-${goal.id}` : undefined}
           aria-label={accessibleName}
           onClick={() => setEditing((open) => !open)}
-          className="hover:bg-muted/50 focus-visible:ring-ring/50 flex min-h-14 w-full items-center gap-3 rounded-2xl px-4 py-3 text-left focus-visible:ring-1 focus-visible:outline-none"
+          className="hover:bg-muted/50 focus-visible:ring-ring flex min-h-14 w-full items-center gap-3 rounded-2xl px-4 py-3 text-left focus-visible:ring-1 focus-visible:outline-none"
         >
           <GoalMark goal={goal} />
           <span className="min-w-0 flex-1">

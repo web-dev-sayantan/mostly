@@ -27,7 +27,7 @@ const AppShell = ({ children }: { children: ReactNode }) => (
       <div className="mx-auto flex h-14 w-full max-w-[960px] items-center gap-2 px-4">
         <Link
           to="/today"
-          className="focus-visible:ring-ring/50 flex min-h-11 items-center gap-2 rounded-lg pr-1 font-medium focus-visible:ring-2 focus-visible:outline-none"
+          className="focus-visible:ring-ring flex min-h-11 items-center gap-2 rounded-lg pr-1 font-medium focus-visible:ring-2 focus-visible:outline-none"
           aria-label="Mostly, Today"
         >
           <img
@@ -46,7 +46,7 @@ const AppShell = ({ children }: { children: ReactNode }) => (
                 <Link
                   to={to}
                   activeProps={{ "aria-current": "page" }}
-                  className="text-muted-foreground hover:bg-muted hover:text-foreground data-[status=active]:bg-accent data-[status=active]:text-accent-foreground focus-visible:ring-ring/50 inline-flex min-h-11 items-center rounded-full px-3 text-sm focus-visible:ring-2 focus-visible:outline-none data-[status=active]:font-medium"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground data-[status=active]:bg-accent data-[status=active]:text-accent-foreground focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full px-3 text-sm focus-visible:ring-2 focus-visible:outline-none data-[status=active]:font-medium"
                 >
                   {label}
                 </Link>
@@ -67,7 +67,7 @@ const AppShell = ({ children }: { children: ReactNode }) => (
     <main
       id="main"
       tabIndex={-1}
-      className="focus-visible:ring-ring/50 mx-auto w-full max-w-[960px] flex-1 pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset md:pb-8"
+      className="focus-visible:ring-ring mx-auto w-full max-w-[960px] flex-1 pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(5.5rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset md:pb-8"
     >
       {children}
       <footer className="border-border text-muted-foreground mt-8 border-t pt-3 text-sm">
@@ -85,7 +85,7 @@ const AppShell = ({ children }: { children: ReactNode }) => (
             <Link
               to={to}
               activeProps={{ "aria-current": "page" }}
-              className="text-muted-foreground data-[status=active]:text-foreground focus-visible:ring-ring/50 flex min-h-11 flex-col items-center justify-center gap-0.5 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset data-[status=active]:font-medium"
+              className="text-muted-foreground data-[status=active]:text-foreground focus-visible:ring-ring flex min-h-11 flex-col items-center justify-center gap-0.5 py-1.5 text-sm focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset data-[status=active]:font-medium"
             >
               <Icon className="size-5" aria-hidden="true" />
               <span>{label}</span>

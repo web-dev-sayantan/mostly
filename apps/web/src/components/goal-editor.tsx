@@ -103,7 +103,7 @@ const EmojiPicker = ({
         aria-pressed={value === null}
         onClick={() => onChange(null)}
         className={cn(
-          "border-border focus-visible:ring-ring/50 flex size-11 items-center justify-center rounded-full border text-sm focus-visible:ring-2 focus-visible:outline-none",
+          "border-border focus-visible:ring-ring flex size-11 items-center justify-center rounded-full border text-sm focus-visible:ring-2 focus-visible:outline-none",
           value === null && "bg-muted border-foreground/40"
         )}
       >
@@ -120,7 +120,7 @@ const EmojiPicker = ({
           aria-pressed={value === emoji}
           onClick={() => onChange(emoji)}
           className={cn(
-            "border-border focus-visible:ring-ring/50 flex size-11 items-center justify-center rounded-full border text-xl focus-visible:ring-2 focus-visible:outline-none",
+            "border-border focus-visible:ring-ring flex size-11 items-center justify-center rounded-full border text-xl focus-visible:ring-2 focus-visible:outline-none",
             value === emoji && "bg-muted border-foreground/40"
           )}
         >
@@ -149,7 +149,7 @@ const ColorPicker = ({
         aria-pressed={value === null}
         onClick={() => onChange(null)}
         className={cn(
-          "border-border focus-visible:ring-ring/50 flex size-11 items-center justify-center rounded-full border text-sm focus-visible:ring-2 focus-visible:outline-none",
+          "border-border focus-visible:ring-ring flex size-11 items-center justify-center rounded-full border text-sm focus-visible:ring-2 focus-visible:outline-none",
           value === null && "bg-muted border-foreground/40"
         )}
       >
@@ -163,7 +163,7 @@ const ColorPicker = ({
           aria-pressed={value === color.value}
           onClick={() => onChange(color.value)}
           className={cn(
-            "border-border focus-visible:ring-ring/50 flex size-11 items-center justify-center rounded-full border-2 focus-visible:ring-2 focus-visible:outline-none",
+            "border-border focus-visible:ring-ring flex size-11 items-center justify-center rounded-full border-2 focus-visible:ring-2 focus-visible:outline-none",
             value === color.value && "border-foreground"
           )}
           style={{ backgroundColor: color.value }}
@@ -198,7 +198,7 @@ const PriorityPicker = ({
           aria-pressed={value === priority}
           onClick={() => onChange(priority)}
           className={cn(
-            "border-border focus-visible:ring-ring/50 min-h-11 flex-1 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
+            "border-border focus-visible:ring-ring min-h-11 flex-1 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none",
             value === priority &&
               "bg-primary text-primary-foreground border-primary"
           )}
@@ -462,7 +462,7 @@ export const GoalEditor = ({
           id={`${fieldId}-title`}
           ref={headingRef}
           tabIndex={-1}
-          className="focus-visible:ring-ring/50 min-w-0 rounded-lg text-lg font-medium break-words focus-visible:ring-2 focus-visible:outline-none"
+          className="focus-visible:ring-ring min-w-0 rounded-lg text-lg font-medium break-words focus-visible:ring-2 focus-visible:outline-none"
         >
           {goal ? goal.name : "New goal"}
         </h2>

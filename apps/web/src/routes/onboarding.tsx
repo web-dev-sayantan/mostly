@@ -62,7 +62,7 @@ const SignInStep = () => {
       <h1
         id="onboarding-sign-in"
         tabIndex={-1}
-        className="focus-visible:ring-ring/50 mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
+        className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
       >
         Sign in to Mostly
       </h1>
@@ -234,7 +234,7 @@ const OnboardingPage = () => {
             id="onboarding-goals"
             ref={headingRef}
             tabIndex={-1}
-            className="focus-visible:ring-ring/50 mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
+            className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
           >
             Pick a few things to keep doing.
           </h1>
@@ -255,7 +255,7 @@ const OnboardingPage = () => {
                     type="button"
                     aria-pressed={selected}
                     onClick={() => toggleStarter(starter.name, starter.emoji)}
-                    className="border-border hover:bg-muted aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:border-primary focus-visible:ring-ring/50 inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="border-border hover:bg-muted aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:border-primary focus-visible:ring-ring inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none"
                   >
                     <span aria-hidden="true">{starter.emoji}</span>
                     {starter.name}
@@ -367,7 +367,7 @@ const OnboardingPage = () => {
             id="onboarding-reminder"
             ref={headingRef}
             tabIndex={-1}
-            className="focus-visible:ring-ring/50 mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
+            className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
           >
             Choose a reminder time.
           </h1>

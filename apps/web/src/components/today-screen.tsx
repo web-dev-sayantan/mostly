@@ -125,7 +125,7 @@ export const TodayScreen = ({
             <button
               type="button"
               onClick={dismissHint}
-              className="focus-visible:ring-ring/50 min-h-11 rounded-full px-3 text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+              className="focus-visible:ring-ring min-h-11 rounded-full px-3 text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
             >
               Dismiss
             </button>
@@ -145,7 +145,7 @@ export const TodayScreen = ({
             {hasAnyGoal ? null : (
               <Link
                 to="/goals"
-                className="bg-primary text-primary-foreground focus-visible:ring-ring/50 mt-4 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+                className="bg-primary text-primary-foreground focus-visible:ring-ring mt-4 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
               >
                 Add a goal
               </Link>
@@ -157,7 +157,7 @@ export const TodayScreen = ({
               <h2
                 id="today-heading"
                 tabIndex={-1}
-                className="text-muted-foreground focus-visible:ring-ring/50 rounded-lg text-sm font-medium tracking-wide uppercase focus-visible:ring-2 focus-visible:outline-none"
+                className="text-muted-foreground focus-visible:ring-ring rounded-lg text-sm font-medium tracking-wide uppercase focus-visible:ring-2 focus-visible:outline-none"
               >
                 Today
               </h2>

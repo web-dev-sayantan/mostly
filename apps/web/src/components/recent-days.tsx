@@ -161,7 +161,7 @@ const DayDetails = ({
                 aria-pressed={mood === option}
                 onClick={() => setMood(mood === option ? null : option)}
                 className={cn(
-                  "border-border focus-visible:ring-ring/50 min-h-11 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
+                  "border-border focus-visible:ring-ring min-h-11 rounded-full border px-4 text-sm focus-visible:ring-2 focus-visible:outline-none",
                   mood === option &&
                     "bg-primary text-primary-foreground border-primary"
                 )}
@@ -225,7 +225,7 @@ const DayDetails = ({
           id={headingId}
           ref={initialFocus}
           tabIndex={-1}
-          className="focus-visible:ring-ring/50 rounded-lg text-base font-medium focus-visible:ring-2 focus-visible:outline-none"
+          className="focus-visible:ring-ring rounded-lg text-base font-medium focus-visible:ring-2 focus-visible:outline-none"
         >
           {formatLogicalDate(row.date)}
         </h3>
@@ -342,7 +342,7 @@ export const RecentDays = ({
         id="recent-heading"
         ref={sectionHeadingRef}
         tabIndex={-1}
-        className="focus-visible:ring-ring/50 rounded-lg text-lg font-medium focus-visible:ring-2 focus-visible:outline-none"
+        className="focus-visible:ring-ring rounded-lg text-lg font-medium focus-visible:ring-2 focus-visible:outline-none"
       >
         Recent days
       </h2>
@@ -369,7 +369,7 @@ export const RecentDays = ({
                 <Link
                   to="/day/$date"
                   params={{ date: row.date }}
-                  className="focus-visible:ring-ring/50 flex min-h-11 min-w-0 flex-1 flex-col justify-center rounded-lg py-2 focus-visible:ring-1 focus-visible:outline-none"
+                  className="focus-visible:ring-ring flex min-h-11 min-w-0 flex-1 flex-col justify-center rounded-lg py-2 focus-visible:ring-1 focus-visible:outline-none"
                 >
                   <span className="block truncate text-base font-medium">
                     {formatLogicalDate(row.date)}
