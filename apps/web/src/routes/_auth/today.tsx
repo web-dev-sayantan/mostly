@@ -1,5 +1,5 @@
 import type { GoalDto } from "@mostly/api/routers/goals";
-import { weekStartOf } from "@mostly/domain";
+import { skippedDatesOf, weekStartOf } from "@mostly/domain";
 import { Button } from "@mostly/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -124,9 +124,11 @@ const TodayPage = () => {
             sessions,
             today,
             weekStartsOn: settings.weekStartsOn,
+            weekStartHistory: history ?? [],
+            skippedDates: skippedDatesOf(history ?? []),
           })
         : null,
-    [allGoals, goalsData, sessions, settings, today]
+    [allGoals, goalsData, history, sessions, settings, today]
   );
 
   if (!(today && settings && view)) {

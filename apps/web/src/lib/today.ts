@@ -1,5 +1,9 @@
 import type { GoalDto } from "@mostly/api/routers/goals";
-import type { Cadence, SettingVersion } from "@mostly/domain";
+import type {
+  Cadence,
+  SettingVersion,
+  WeekSettingsVersion,
+} from "@mostly/domain";
 import {
   addLogicalDays,
   comparePriority,
@@ -7,6 +11,7 @@ import {
   resolveSchedule,
   resolveSettingsForNow,
   weekEndOf,
+  weekSegmentFor,
   weekStartOf,
 } from "@mostly/domain";
 
@@ -62,11 +67,13 @@ const sessionKey = (goalId: string, date: string): string =>
 const activeDaysInWeek = (
   goal: GoalDto,
   weekStart: string,
-  weekEnd: string
+  weekEnd: string,
+  skipped: ReadonlySet<string>
 ) => {
   let active = 0;
   for (let date = weekStart; date <= weekEnd; date = addLogicalDays(date, 1)) {
     if (
+      !skipped.has(date) &&
       date >= goal.startDate &&
       (goal.archivedOn === null || date <= goal.archivedOn)
     ) {
@@ -81,14 +88,22 @@ export const buildTodayView = ({
   sessions,
   today,
   weekStartsOn,
+  weekStartHistory,
+  skippedDates = [],
 }: {
   goals: readonly GoalDto[];
   sessions: readonly LocalSession[];
   today: string;
   weekStartsOn: number;
+  weekStartHistory?: readonly WeekSettingsVersion[];
+  skippedDates?: readonly string[];
 }): TodayView => {
-  const weekStart = weekStartOf(today, weekStartsOn);
-  const weekEnd = weekEndOf(today, weekStartsOn);
+  const skipped = new Set(skippedDates);
+  const segment = weekStartHistory?.length
+    ? weekSegmentFor(weekStartHistory, today)
+    : null;
+  const weekStart = segment?.start ?? weekStartOf(today, weekStartsOn);
+  const weekEnd = segment?.end ?? weekEndOf(today, weekStartsOn);
   const activeGoals = goals
     .filter((goal) => isActive(goal, today))
     .toSorted(byPriorityThenCreation);
@@ -132,17 +147,19 @@ export const buildTodayView = ({
             entry.logicalDate >= weekStart &&
             entry.logicalDate <= weekEnd &&
             entry.logicalDate >= goal.startDate &&
-            (goal.archivedOn === null || entry.logicalDate <= goal.archivedOn)
+            (goal.archivedOn === null ||
+              entry.logicalDate <= goal.archivedOn) &&
+            !skipped.has(entry.logicalDate)
         )
         .map((entry) => entry.logicalDate)
     );
-    const activeDays = activeDaysInWeek(goal, weekStart, weekEnd);
+    const activeDays = activeDaysInWeek(goal, weekStart, weekEnd, skipped);
 
     weeklyGoals.push({
       goal,
       target: cadence.target,
       count: dates.size,
-      scored: activeDays >= cadence.target,
+      scored: !segment?.transition && activeDays >= cadence.target,
       met: dates.size >= cadence.target,
       session: sessionOn(goal.id, today),
       weekStart,
