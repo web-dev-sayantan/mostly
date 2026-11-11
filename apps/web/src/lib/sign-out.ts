@@ -23,7 +23,7 @@ export const finishSignOut = async (): Promise<boolean> => {
   }
 
   clearOfflineData();
-  window.location.assign("/login");
+  window.location.assign("/");
   return true;
 };
 
@@ -36,5 +36,5 @@ export const finishAccountDeletion = async (): Promise<void> => {
   } catch {
     // The server already deleted the session with the account.
   }
-  window.location.assign("/login");
+  window.location.assign("/");
 };

@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  needsOnboarding,
-  onboardingIsComplete,
-  shouldRequestPush,
-} from "./onboarding";
+import { needsOnboarding, shouldRequestPush } from "./onboarding";
 
 describe("onboarding redirects", () => {
   it("sends an unfinished account to onboarding", () => {
@@ -14,13 +10,6 @@ describe("onboarding redirects", () => {
   it("leaves a completed or unknown account alone", () => {
     expect(needsOnboarding(true)).toBe(false);
     expect(needsOnboarding(null)).toBe(false);
-  });
-
-  it("leaves onboarding only for a signed-in completed account", () => {
-    expect(onboardingIsComplete(true, true)).toBe(true);
-    expect(onboardingIsComplete(true, false)).toBe(false);
-    expect(onboardingIsComplete(true, null)).toBe(false);
-    expect(onboardingIsComplete(false, true)).toBe(false);
   });
 });
 

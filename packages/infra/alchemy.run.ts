@@ -1,5 +1,6 @@
+import * as Cloudflare from "@alchemy.run/cloudflare";
 import * as Alchemy from "alchemy";
-import * as Cloudflare from "alchemy/Cloudflare";
+import * as Output from "alchemy/Output";
 import { Redacted } from "effect";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
@@ -53,13 +54,19 @@ export default Alchemy.Stack(
         notFoundHandling: "single-page-application",
       },
       env: {
-        // The browser reaches the server through the public origin Caddy serves.
-        // shortcut: this also feeds deployed stages; switch back to serverWorker.url for production.
-        VITE_SERVER_URL: Config.String("BETTER_AUTH_URL"),
+        VITE_SERVER_URL: serverWorker.url.pipe(
+          Output.map((url) => {
+            if (!url) {
+              throw new Error("Server Worker URL is unavailable");
+            }
+            return url;
+          })
+        ),
       },
       dev: {
         port: 3003,
       },
+      name: "mostly",
     });
 
     return {

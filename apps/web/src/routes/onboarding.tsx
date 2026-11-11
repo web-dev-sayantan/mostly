@@ -2,7 +2,7 @@ import { Button } from "@mostly/ui/components/button";
 import { Input } from "@mostly/ui/components/input";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   CadenceFields,
@@ -10,10 +10,9 @@ import {
   cadenceFormValue,
 } from "@/components/cadence-fields";
 import type { CadenceFormValue } from "@/components/cadence-fields";
-import { authClient, signInWithGoogle } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { cadenceSummary, defaultStartDate } from "@/lib/goals";
 import {
-  onboardingIsComplete,
   REMINDER_PERMISSION_COPY,
   shouldRequestPush,
   STARTER_GOALS,
@@ -37,62 +36,13 @@ const draftFrom = (name: string, emoji: string): DraftGoal => ({
   cadence: cadenceFormValue({ type: "daily" }),
 });
 
-const SignInStep = () => {
-  const [status, setStatus] = useState<"idle" | "opening">("idle");
-  const [signInError, setSignInError] = useState<string | null>(null);
-
-  const signIn = async () => {
-    setStatus("opening");
-    setSignInError(null);
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      setStatus("idle");
-      setSignInError(
-        error instanceof Error
-          ? error.message
-          : "Could not sign in with Google."
-      );
-    }
-  };
-
-  return (
-    <section aria-labelledby="onboarding-sign-in">
-      <p className="text-muted-foreground text-sm">Step 1 of 3</p>
-      <h1
-        id="onboarding-sign-in"
-        tabIndex={-1}
-        className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
-      >
-        Sign in to Mostly
-      </h1>
-      <p className="text-muted-foreground mt-2 text-sm">
-        Your goals stay yours. No social feed, no sharing.
-      </p>
-      <Button
-        type="button"
-        className="mt-6 min-h-11 w-full rounded-full text-sm sm:w-auto sm:px-6"
-        disabled={status === "opening"}
-        onClick={signIn}
-      >
-        {status === "opening" ? "Opening Google…" : "Continue with Google"}
-      </Button>
-      {signInError ? (
-        <p role="alert" className="text-destructive mt-4 text-sm">
-          {signInError}
-        </p>
-      ) : null}
-      <p className="text-muted-foreground mt-8 text-sm">
-        A quiet record of what you did.
-      </p>
-    </section>
-  );
+const focusHeading = (heading: HTMLHeadingElement | null) => {
+  heading?.focus();
 };
 
 const OnboardingPage = () => {
-  const session = authClient.useSession();
   const navigate = useNavigate();
-  const [step, setStep] = useState(2);
+  const [step, setStep] = useState<"goals" | "reminder">("goals");
   const [drafts, setDrafts] = useState<DraftGoal[]>([]);
   const [custom, setCustom] = useState("");
   const [customError, setCustomError] = useState<string | null>(null);
@@ -100,20 +50,10 @@ const OnboardingPage = () => {
   const [reminderTime, setReminderTime] = useState("21:30");
   const [saving, setSaving] = useState(false);
   const [finishError, setFinishError] = useState<string | null>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
   const created = useRef(new Set<string>());
   const platform = pushPlatform();
   const installed = isInstalledApp();
-  const publicKeyQuery = useQuery({
-    ...orpc.reminders.publicKey.queryOptions(),
-    enabled: Boolean(session.data),
-  });
-
-  useEffect(() => {
-    if (step > 1 && session.data) {
-      headingRef.current?.focus();
-    }
-  }, [step, session.data]);
+  const publicKeyQuery = useQuery(orpc.reminders.publicKey.queryOptions());
 
   const toggleStarter = (name: string, emoji: string) => {
     setDrafts((current) =>
@@ -206,14 +146,6 @@ const OnboardingPage = () => {
     setSaving(false);
   };
 
-  if (session.isPending) {
-    return (
-      <main className="grid min-h-svh place-items-center px-6">
-        <p className="text-muted-foreground text-sm">Loading Mostly…</p>
-      </main>
-    );
-  }
-
   return (
     <main className="mx-auto grid min-h-svh w-full max-w-2xl content-start gap-6 px-6 py-10">
       <header className="flex items-center gap-2">
@@ -227,14 +159,12 @@ const OnboardingPage = () => {
         <span className="font-medium">mostly</span>
       </header>
 
-      {session.data ? null : <SignInStep />}
-
-      {session.data && step === 2 ? (
+      {step === "goals" ? (
         <section aria-labelledby="onboarding-goals">
-          <p className="text-muted-foreground text-sm">Step 2 of 3</p>
+          <p className="text-muted-foreground text-sm">Step 1 of 2</p>
           <h1
             id="onboarding-goals"
-            ref={headingRef}
+            ref={focusHeading}
             tabIndex={-1}
             className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
           >
@@ -351,7 +281,7 @@ const OnboardingPage = () => {
             <Button
               type="button"
               className="min-h-11 rounded-full px-5 text-sm"
-              onClick={() => setStep(3)}
+              onClick={() => setStep("reminder")}
             >
               Continue
             </Button>
@@ -362,12 +292,12 @@ const OnboardingPage = () => {
         </section>
       ) : null}
 
-      {session.data && step === 3 ? (
+      {step === "reminder" ? (
         <section aria-labelledby="onboarding-reminder">
-          <p className="text-muted-foreground text-sm">Step 3 of 3</p>
+          <p className="text-muted-foreground text-sm">Step 2 of 2</p>
           <h1
             id="onboarding-reminder"
-            ref={headingRef}
+            ref={focusHeading}
             tabIndex={-1}
             className="focus-visible:ring-ring mt-3 rounded-lg text-[28px] leading-tight font-medium outline-none focus-visible:ring-2"
           >
@@ -437,7 +367,7 @@ const OnboardingPage = () => {
               variant="ghost"
               className="min-h-11 rounded-full px-4 text-sm"
               disabled={saving}
-              onClick={() => setStep(2)}
+              onClick={() => setStep("goals")}
             >
               Back
             </Button>
@@ -452,10 +382,10 @@ export const Route = createFileRoute("/onboarding")({
   beforeLoad: async () => {
     const session = await authClient.getSession().catch(() => null);
     if (!session?.data) {
-      return;
+      throw redirect({ to: "/" });
     }
     const status = await client.onboarding.status().catch(() => null);
-    if (onboardingIsComplete(true, status?.completed ?? null)) {
+    if (status?.completed) {
       throw redirect({ to: "/today" });
     }
   },

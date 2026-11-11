@@ -1,46 +1,31 @@
 import { Button } from "@mostly/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@mostly/ui/components/dropdown-menu";
-import { Moon, Sun } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 
 import { useTheme } from "@/components/theme-provider";
 
+const modes = {
+  dark: { icon: Moon, label: "Dark", next: "light" },
+  light: { icon: Sun, label: "Light", next: "system" },
+  system: { icon: Monitor, label: "System", next: "dark" },
+} as const;
+
 export const ModeToggle = () => {
-  const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const mode = theme === "dark" || theme === "light" ? theme : "system";
+  const { icon: Icon, label, next } = modes[mode];
+  const description = `Theme: ${label}. Switch to ${modes[next].label.toLowerCase()} mode`;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button variant="ghost" className="size-11 rounded-full" />}
-      >
-        <Sun aria-hidden="true" className="size-5 dark:hidden" />
-        <Moon aria-hidden="true" className="hidden size-5 dark:block" />
-        <span className="sr-only">Toggle theme</span>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-card" aria-label="Theme">
-        <DropdownMenuItem
-          className="min-h-11 text-sm"
-          onClick={() => setTheme("light")}
-        >
-          Light
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="min-h-11 text-sm"
-          onClick={() => setTheme("dark")}
-        >
-          Dark
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="min-h-11 text-sm"
-          onClick={() => setTheme("system")}
-        >
-          System
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-13 rounded-full active:not-aria-[haspopup]:translate-y-0"
+      aria-label={description}
+      title={description}
+      onClick={() => setTheme(next)}
+    >
+      <Icon aria-hidden="true" className="size-5" />
+    </Button>
   );
 };

@@ -19,6 +19,10 @@ export default defineConfig({
     },
     host: true,
     port: 3003,
+    proxy: {
+      "/api": "http://localhost:3004",
+      "/rpc": "http://localhost:3004",
+    },
   },
   resolve: {
     tsconfigPaths: true,

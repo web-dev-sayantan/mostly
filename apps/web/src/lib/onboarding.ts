@@ -26,11 +26,6 @@ export const REMINDER_PERMISSION_COPY =
 export const needsOnboarding = (completed: boolean | null): boolean =>
   completed === false;
 
-export const onboardingIsComplete = (
-  signedIn: boolean,
-  completed: boolean | null
-): boolean => signedIn && completed === true;
-
 /** iOS waits for install plus the first session before asking for push. */
 export const shouldRequestPush = ({
   requested,

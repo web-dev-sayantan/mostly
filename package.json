@@ -35,14 +35,14 @@
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@mostly/config": "workspace:*",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.6.6",
     "oxfmt": "^0.71.0",
-    "oxlint": "^1.86.0",
+    "oxlint": "^1.93.0",
     "rolldown": "1.2.13",
     "typescript": "catalog:",
     "ultracite": "8.0.0",
     "varlock": "catalog:",
     "vite-plus": "1.1.0"
   },
-  "packageManager": "pnpm@12.14.0"
+  "packageManager": "pnpm@12.18.0"
 }
