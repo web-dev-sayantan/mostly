@@ -170,7 +170,7 @@ It is not a task manager, a social habit game, or a productivity scoreboard. It 
 - Date line: "Tuesday, 20 October." Logical date, not wall-clock date. Between midnight and rollover, append "· still open until the rollover time."
 - Progress: "3 of 5 done" plus a thin bar. Counts today's daily/weekday goals only. If the user only has weekly targets, show "2 weekly targets" instead of a 0/0 bar.
 - **Today** section: daily and weekday goals scheduled today. Sorted by priority (high → low), then creation order.
-- **This week** section: weekly-target goals not yet met, with progress dots and "2 of 4 this week." If the week has fewer active days than the target, show "Not scored this week" instead of progress; sessions still count in history. Goals with the target met show "Target met" and a secondary "Log another session" action.
+- **This week** section: weekly-target goals not yet met, with progress dots and "2 of 4 this week." If the week has fewer active days than the target, show "Not scored this week" instead of progress; sessions still count in history. Goals with the target met show "Target met" and a "Log another session" cue on the full-row action.
 - **Not scheduled today** (collapsed by default): weekday goals that are off today. Tapping opens the day detail so the user can log an extra session if they did it anyway. This keeps the main list focused without punishing extra effort.
 - Footer: **Past 7 days** link.
 - Bottom navigation: Today, Progress, Goals, Account.
@@ -178,9 +178,10 @@ It is not a task manager, a social habit game, or a productivity scoreboard. It 
 **Goal row:**
 
 - Emoji or color dot, goal name, one line of cadence context (`Daily`, `Mon / Wed / Fri`, `2 of 4 this week`).
-- Large 44×44 check target on the right. Tap = done. No confirmation.
+- The full row is one button, with hover, press, and keyboard focus feedback. Tap anywhere = done. No confirmation. The check circle on the right is a visual status indicator.
 - A small dot indicates details exist (minutes/note/mood).
-- Done rows stay in place, visually muted, with a check. Tapping the row opens details; **Mark as not done** lives inside the details panel, not on the main tap target.
+- Done rows stay in place, visually muted, with a check. Tapping the row toggles details open/closed, indicated by a chevron; **Mark as not done** lives inside the details panel, not on the main tap target.
+- After completion, the 5-second Undo strip also offers Add details.
 - Never use swipe-only actions; every action has a visible button.
 
 **States:**

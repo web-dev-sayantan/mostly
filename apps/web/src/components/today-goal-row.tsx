@@ -1,6 +1,6 @@
 import type { GoalDto } from "@mostly/api/routers/goals";
 import { cn } from "@mostly/ui/lib/utils";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { cadenceSummary } from "@/lib/goals";
@@ -59,84 +59,18 @@ const GoalName = ({
   </span>
 );
 
-const CheckTarget = ({
-  goal,
-  done,
-  detailsOpen,
-  detailsSupported,
-  description,
-  onMarkDone,
-  onOpenDetails,
-  onRegisterAction,
-}: {
-  goal: GoalDto;
-  done: boolean;
-  detailsOpen: boolean;
-  detailsSupported: boolean;
-  description?: string;
-  onMarkDone: (goal: GoalDto) => void;
-  onOpenDetails?: (goalId: string) => void;
-  onRegisterAction?: (goalId: string, node: HTMLButtonElement | null) => void;
-}) => {
-  const canEditDetails = done && detailsSupported && onOpenDetails;
-  let onClick: (() => void) | undefined = () => onMarkDone(goal);
-  if (done) {
-    onClick = undefined;
-    if (canEditDetails) {
-      onClick = () => onOpenDetails(goal.id);
-    }
-  }
-
-  return (
-    <button
-      ref={(node) => onRegisterAction?.(goal.id, node)}
-      type="button"
-      onClick={onClick}
-      aria-label={checkButtonLabel(goal.name, done, Boolean(canEditDetails))}
-      aria-describedby={
-        done && description ? `today-description-${goal.id}` : undefined
-      }
-      aria-expanded={canEditDetails ? detailsOpen : undefined}
-      aria-controls={canEditDetails ? `today-panel-${goal.id}` : undefined}
-      className="focus-visible:ring-ring flex size-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-    >
-      <span
-        className={cn(
-          "flex size-8 items-center justify-center rounded-full border-2 transition-colors",
-          done
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-border"
-        )}
-      >
-        {done ? (
-          <Check
-            aria-hidden="true"
-            className="mostly-check size-4"
-            strokeWidth={2.5}
-          />
-        ) : null}
-      </span>
-    </button>
-  );
-};
-
-const UndoControl = ({
-  goalName,
-  onUndo,
-}: {
-  goalName: string;
-  onUndo: () => void;
-}) => (
-  <div className="border-t px-2 py-0.5">
-    <button
-      type="button"
-      onClick={onUndo}
-      aria-label={`Undo ${goalName}`}
-      className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-    >
-      Undo
-    </button>
-  </div>
+const CheckStatus = ({ done }: { done: boolean }) => (
+  <span
+    aria-hidden="true"
+    className={cn(
+      "flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+      done
+        ? "border-primary bg-primary text-primary-foreground"
+        : "border-border"
+    )}
+  >
+    {done ? <Check className="mostly-check size-4" strokeWidth={2.5} /> : null}
+  </span>
 );
 
 const AddDetails = ({
@@ -160,6 +94,34 @@ const AddDetails = ({
   </button>
 );
 
+const UndoControl = ({
+  goal,
+  onOpenDetails,
+  onUndo,
+}: {
+  goal: GoalDto;
+  onOpenDetails?: (goalId: string) => void;
+  onUndo: () => void;
+}) => (
+  <div className="flex items-center justify-between border-t px-2 py-0.5">
+    <button
+      type="button"
+      onClick={onUndo}
+      aria-label={`Undo ${goal.name}`}
+      className="text-primary focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+    >
+      Undo
+    </button>
+    {onOpenDetails ? (
+      <AddDetails
+        goal={goal}
+        detailsOpen={false}
+        onOpenDetails={onOpenDetails}
+      />
+    ) : null}
+  </div>
+);
+
 export interface TodayRowProps {
   detailsOpen: boolean;
   undoActive: boolean;
@@ -170,8 +132,11 @@ export interface TodayRowProps {
   onRegisterAction?: (goalId: string, node: HTMLButtonElement | null) => void;
 }
 
-export const TodayGoalRow = ({
-  entry,
+const GoalRow = ({
+  goal,
+  session,
+  logAnother = false,
+  children,
   detailsOpen,
   undoActive,
   details,
@@ -179,12 +144,90 @@ export const TodayGoalRow = ({
   onOpenDetails,
   onUndo,
   onRegisterAction,
+}: TodayRowProps & {
+  goal: GoalDto;
+  session: TodayGoal["session"];
+  logAnother?: boolean;
+  children: ReactNode;
+}) => {
+  const done = session !== null;
+  const canEditDetails = done && Boolean(onOpenDetails);
+  const description = session ? describeSession(goal.name, session) : undefined;
+  const label =
+    logAnother && !done
+      ? `Log another session for ${goal.name}`
+      : checkButtonLabel(goal.name, done, canEditDetails);
+
+  return (
+    <li
+      className={cn(
+        "bg-card overflow-hidden rounded-2xl border",
+        done && "bg-muted/40"
+      )}
+    >
+      <button
+        ref={(node) => onRegisterAction?.(goal.id, node)}
+        type="button"
+        disabled={done && !onOpenDetails}
+        onClick={() => {
+          if (done) {
+            onOpenDetails?.(goal.id);
+          } else {
+            onMarkDone(goal);
+          }
+        }}
+        aria-label={label}
+        aria-describedby={
+          description ? `today-description-${goal.id}` : undefined
+        }
+        aria-expanded={canEditDetails ? detailsOpen : undefined}
+        aria-controls={canEditDetails ? `today-panel-${goal.id}` : undefined}
+        className="hover:bg-muted/50 active:bg-muted focus-visible:ring-ring flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-2xl px-4 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset disabled:cursor-default"
+      >
+        {children}
+        {logAnother && !done ? (
+          <span className="text-muted-foreground max-w-24 text-right text-sm">
+            Log another session
+          </span>
+        ) : null}
+        <CheckStatus done={done} />
+        <span aria-hidden="true" className="flex size-4 shrink-0 items-center">
+          {canEditDetails ? (
+            <ChevronDown
+              aria-hidden="true"
+              className={cn(
+                "text-muted-foreground size-4 shrink-0 motion-safe:transition-transform",
+                detailsOpen && "rotate-180"
+              )}
+            />
+          ) : null}
+        </span>
+      </button>
+      {description ? (
+        <span id={`today-description-${goal.id}`} className="sr-only">
+          {description}
+        </span>
+      ) : null}
+      {undoActive ? (
+        <UndoControl
+          goal={goal}
+          onUndo={onUndo}
+          onOpenDetails={onOpenDetails}
+        />
+      ) : null}
+      {details}
+    </li>
+  );
+};
+
+export const TodayGoalRow = ({
+  entry,
+  ...props
 }: TodayRowProps & { entry: TodayGoal }) => {
   const { goal, cadence, session } = entry;
   const done = session !== null;
   const detailsDot = hasSessionDetails(session);
-  const detailsSupported = Boolean(onOpenDetails);
-  const description = session ? describeSession(goal.name, session) : undefined;
+  const detailsSupported = Boolean(props.onOpenDetails);
   const summary = session ? detailsSummary(session) : null;
 
   const content = (
@@ -205,59 +248,9 @@ export const TodayGoalRow = ({
   );
 
   return (
-    <li
-      className={cn(
-        "bg-card overflow-hidden rounded-2xl border",
-        done && "bg-muted/40"
-      )}
-    >
-      <div className="flex min-h-14 items-center">
-        {done && onOpenDetails ? (
-          <button
-            type="button"
-            onClick={() => onOpenDetails(goal.id)}
-            aria-describedby={
-              description ? `today-description-${goal.id}` : undefined
-            }
-            aria-expanded={detailsOpen}
-            aria-controls={`today-panel-${goal.id}`}
-            className="focus-visible:ring-ring flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
-          >
-            {content}
-          </button>
-        ) : (
-          <div className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 py-2">
-            {content}
-          </div>
-        )}
-        <div className="flex shrink-0 items-center gap-1 pr-2">
-          {done && onOpenDetails ? (
-            <AddDetails
-              goal={goal}
-              detailsOpen={detailsOpen}
-              onOpenDetails={onOpenDetails}
-            />
-          ) : null}
-          <CheckTarget
-            goal={goal}
-            done={done}
-            detailsOpen={detailsOpen}
-            detailsSupported={detailsSupported}
-            description={description}
-            onMarkDone={onMarkDone}
-            onOpenDetails={onOpenDetails}
-            onRegisterAction={onRegisterAction}
-          />
-        </div>
-      </div>
-      {description ? (
-        <span id={`today-description-${goal.id}`} className="sr-only">
-          {description}
-        </span>
-      ) : null}
-      {undoActive ? <UndoControl goalName={goal.name} onUndo={onUndo} /> : null}
-      {details}
-    </li>
+    <GoalRow {...props} goal={goal} session={session}>
+      {content}
+    </GoalRow>
   );
 };
 
@@ -283,21 +276,14 @@ const ProgressDots = ({ entry }: { entry: WeeklyGoal }) => {
 
 export const WeeklyGoalRow = ({
   entry,
-  detailsOpen,
-  undoActive,
-  details,
-  onMarkDone,
-  onOpenDetails,
-  onUndo,
-  onRegisterAction,
+  ...props
 }: TodayRowProps & { entry: WeeklyGoal }) => {
   const { goal, session } = entry;
   const done = session !== null;
   const detailsDot = hasSessionDetails(session);
-  const detailsSupported = Boolean(onOpenDetails);
+  const detailsSupported = Boolean(props.onOpenDetails);
   const status = weeklyTargetCopy(entry);
   const countCopy = entry.scored && entry.met ? weeklyCountCopy(entry) : null;
-  const description = session ? describeSession(goal.name, session) : undefined;
   const summary = session ? detailsSummary(session) : null;
 
   const content = (
@@ -327,70 +313,8 @@ export const WeeklyGoalRow = ({
   );
 
   return (
-    <li
-      className={cn(
-        "bg-card overflow-hidden rounded-2xl border",
-        done && "bg-muted/40"
-      )}
-    >
-      <div className="flex min-h-14 items-center">
-        {done && onOpenDetails ? (
-          <button
-            type="button"
-            onClick={() => onOpenDetails(goal.id)}
-            aria-describedby={
-              description ? `today-description-${goal.id}` : undefined
-            }
-            aria-expanded={detailsOpen}
-            aria-controls={`today-panel-${goal.id}`}
-            className="focus-visible:ring-ring flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-l-2xl px-4 py-2 text-left focus-visible:ring-2 focus-visible:outline-none"
-          >
-            {content}
-          </button>
-        ) : (
-          <div className="flex min-h-14 min-w-0 flex-1 items-center gap-3 px-4 py-2">
-            {content}
-          </div>
-        )}
-        <div className="flex shrink-0 items-center gap-1 pr-2">
-          {done && onOpenDetails ? (
-            <AddDetails
-              goal={goal}
-              detailsOpen={detailsOpen}
-              onOpenDetails={onOpenDetails}
-            />
-          ) : null}
-          {!done && entry.met ? (
-            <button
-              ref={(node) => onRegisterAction?.(goal.id, node)}
-              type="button"
-              onClick={() => onMarkDone(goal)}
-              aria-label={`Log another session for ${goal.name}`}
-              className="border-border hover:bg-muted focus-visible:ring-ring inline-flex min-h-11 items-center rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Log another session
-            </button>
-          ) : (
-            <CheckTarget
-              goal={goal}
-              done={done}
-              detailsOpen={detailsOpen}
-              detailsSupported={detailsSupported}
-              description={description}
-              onMarkDone={onMarkDone}
-              onOpenDetails={onOpenDetails}
-              onRegisterAction={onRegisterAction}
-            />
-          )}
-        </div>
-      </div>
-      {description ? (
-        <span id={`today-description-${goal.id}`} className="sr-only">
-          {description}
-        </span>
-      ) : null}
-      {undoActive ? <UndoControl goalName={goal.name} onUndo={onUndo} /> : null}
-      {details}
-    </li>
+    <GoalRow {...props} goal={goal} session={session} logAnother={entry.met}>
+      {content}
+    </GoalRow>
   );
 };

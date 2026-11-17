@@ -36,6 +36,7 @@
     "@cloudflare/workers-types": "catalog:",
     "@mostly/config": "workspace:*",
     "@types/node": "^26.6.6",
+    "happy-dom": "^21.0.4",
     "oxfmt": "^0.71.0",
     "oxlint": "^1.93.0",
     "rolldown": "1.2.13",
