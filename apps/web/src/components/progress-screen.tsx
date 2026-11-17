@@ -5,13 +5,13 @@ import type {
   ProgressToday,
   ProgressWeekCell,
   ProgressWeekStatus,
-  ProgressWeeklyRow,
 } from "@mostly/domain";
 import { PROGRESS_RANGES } from "@mostly/domain";
 import { cn } from "@mostly/ui/lib/utils";
 import { Link } from "@tanstack/react-router";
+import { Check } from "lucide-react";
 
-import { PRIORITY_LABELS, formatDayMonth } from "@/lib/goals";
+import { formatDayMonth } from "@/lib/goals";
 import {
   consistencyValue as formatConsistency,
   formatMinutes,
@@ -22,22 +22,15 @@ import { ProgressHeatmap } from "./progress-heatmap";
 
 const WEEK_CLASS: Record<ProgressWeekStatus, string> = {
   met: "border-transparent bg-primary text-primary-foreground",
-  partial: "border-warm/50 bg-warm/25 text-foreground",
+  partial: "border-warm/50 bg-warm/20 text-foreground",
   none: "border-border bg-muted text-muted-foreground",
   not_scored: "border-border border-dashed text-muted-foreground",
-};
-
-const WEEK_GLYPH: Record<ProgressWeekStatus, string> = {
-  met: "✓",
-  partial: "·",
-  none: "",
-  not_scored: "–",
 };
 
 const DOT_CLASS: Record<ProgressGoalCard["days"][number]["status"], string> = {
   done: "border-transparent bg-primary",
   missed: "border-transparent bg-muted-foreground/25",
-  open: "border-foreground/40 bg-transparent",
+  open: "border-foreground/45 bg-transparent",
   none: "border-border bg-transparent",
 };
 
@@ -54,40 +47,63 @@ const weekLabel = (week: ProgressWeekCell): string => {
   return "No session";
 };
 
-const streakCopy = (card: ProgressGoalCard): string => {
-  if (card.currentStreak === null || card.currentStreak === 0) {
-    return "No streak yet";
-  }
-  const unit = card.unit === "week" ? "week" : "day";
-  return `${card.currentStreak} ${unit}${card.currentStreak === 1 ? "" : "s"} in a row`;
-};
+export const cardMetaCopy = (card: ProgressGoalCard): string | null => {
+  const parts: string[] = [];
 
-const consistencyValue = (card: ProgressGoalCard): string =>
-  formatConsistency(card.consistency);
+  if (card.unit === "week") {
+    const currentWeek = card.weeks.at(-1);
+    if (
+      currentWeek &&
+      currentWeek.status !== "not_scored" &&
+      currentWeek.target > 0
+    ) {
+      parts.push(`${currentWeek.sessions}/${currentWeek.target} this week`);
+    }
+  }
+
+  if (card.currentStreak !== null && card.currentStreak > 0) {
+    const unit = card.unit === "week" ? "w" : "d";
+    parts.push(`${card.currentStreak}${unit} streak`);
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : null;
+};
 
 const WeekCells = ({
   weeks,
   label,
-  compact = false,
 }: {
   weeks: ProgressWeekCell[];
   label: string;
-  compact?: boolean;
 }) => (
   <div className="shrink-0">
-    <ol aria-hidden="true" className="flex gap-1">
-      {weeks.map((week) => (
-        <li
-          key={week.weekStart}
-          className={cn(
-            "flex items-center justify-center rounded-[4px] border text-sm leading-none",
-            compact ? "size-4" : "size-7",
-            WEEK_CLASS[week.status]
-          )}
-        >
-          {WEEK_GLYPH[week.status]}
-        </li>
-      ))}
+    <ol aria-hidden="true" className="flex gap-1.5">
+      {weeks.map((week, index) => {
+        const isCurrent = index === weeks.length - 1;
+        return (
+          <li
+            key={week.weekStart}
+            className={cn(
+              "flex size-6 items-center justify-center rounded-md border text-sm leading-none",
+              WEEK_CLASS[week.status],
+              isCurrent &&
+                "ring-foreground/30 ring-offset-card ring-1 ring-offset-1"
+            )}
+          >
+            {week.status === "met" ? (
+              <Check
+                aria-hidden="true"
+                className="size-3.5"
+                strokeWidth={2.5}
+              />
+            ) : null}
+            {week.status === "partial" ? (
+              <span className="bg-warm size-1.5 rounded-full" />
+            ) : null}
+            {week.status === "not_scored" ? "–" : null}
+          </li>
+        );
+      })}
     </ol>
     <span className="sr-only">
       {label}:{" "}
@@ -104,17 +120,24 @@ const WeekCells = ({
 
 const DayDots = ({ card }: { card: ProgressGoalCard }) => (
   <div>
-    <ol aria-hidden="true" className="flex gap-1.5">
-      {card.days.map((dot) => (
-        <li
-          key={dot.date}
-          className={cn(
-            "size-2.5 rounded-full border",
-            DOT_CLASS[dot.status],
-            dot.extra && "ring-warm/60 ring-2"
-          )}
-        />
-      ))}
+    <ol aria-hidden="true" className="flex items-center gap-1.5">
+      {card.days.map((dot, index) => {
+        const isToday = index === card.days.length - 1;
+        return (
+          <li
+            key={dot.date}
+            className={cn(
+              "size-3 rounded-full border",
+              DOT_CLASS[dot.status],
+              dot.extra && "ring-warm/60 ring-2",
+              isToday &&
+                !dot.extra &&
+                dot.status !== "open" &&
+                "ring-foreground/30 ring-offset-card ring-1 ring-offset-1"
+            )}
+          />
+        );
+      })}
     </ol>
     <span className="sr-only">
       Last 7 days:{" "}
@@ -139,7 +162,7 @@ const RangeSelector = ({
   range: ProgressRange;
   onChange: (range: ProgressRange) => void;
 }) => (
-  <fieldset className="border-border inline-flex rounded-full border p-1">
+  <fieldset className="border-border bg-card inline-flex rounded-full border p-1">
     <legend className="sr-only">Progress range</legend>
     {PROGRESS_RANGES.map((value) => (
       <button
@@ -149,7 +172,7 @@ const RangeSelector = ({
         aria-label={`${value} days`}
         onClick={() => onChange(value)}
         className={cn(
-          "focus-visible:ring-ring min-h-11 rounded-full px-3 text-sm tabular-nums focus-visible:ring-2 focus-visible:outline-none",
+          "focus-visible:ring-ring min-h-11 rounded-full px-3.5 text-sm font-medium tabular-nums transition-colors focus-visible:ring-2 focus-visible:outline-none",
           range === value
             ? "bg-primary text-primary-foreground"
             : "text-muted-foreground hover:text-foreground"
@@ -169,13 +192,12 @@ const TodayBanner = ({ today }: { today: ProgressToday }) => {
   return (
     <Link
       to="/today"
-      className="bg-card focus-visible:ring-ring mt-4 flex min-h-11 flex-wrap items-center gap-x-2 rounded-2xl border px-4 py-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+      className="bg-accent/55 border-primary/20 hover:bg-accent/80 focus-visible:ring-ring mt-4 flex min-h-11 items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
     >
-      <span className="font-medium">
+      <span className="font-medium tabular-nums">
         {today.done} of {today.total} today
       </span>
-      <span aria-hidden="true">·</span>
-      <span>
+      <span className="text-foreground/80">
         Close the day <span aria-hidden="true">→</span>
       </span>
     </Link>
@@ -184,43 +206,49 @@ const TodayBanner = ({ today }: { today: ProgressToday }) => {
 
 const Hero = ({ result }: { result: ProgressResult }) => {
   const { consistency, sessions, minutes } = result.hero;
+  const showMinutes = minutes.withMinutes >= 3;
 
   return (
-    <section aria-labelledby="progress-hero-heading" className="mt-6">
-      <h2
-        id="progress-hero-heading"
-        className="text-muted-foreground text-sm font-medium tracking-wide uppercase"
-      >
-        Average goal consistency
-      </h2>
-      <div className="mt-2">
-        {consistency.percent === null ? (
-          <p className="text-xl font-medium">Not enough data yet.</p>
-        ) : (
-          <>
-            <p className="text-[28px] leading-tight font-medium tabular-nums">
-              {consistency.percent}%
-            </p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Based on {consistency.qualifying} of {consistency.total} goals.
-            </p>
-          </>
+    <section aria-label="Summary" className="mt-6">
+      <dl
+        className={cn(
+          "grid gap-3",
+          showMinutes ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"
         )}
-      </div>
+      >
+        <div className="bg-card rounded-2xl border p-4">
+          <dt className="text-muted-foreground text-sm">Consistency</dt>
+          {consistency.percent === null ? (
+            <dd className="text-muted-foreground mt-1 text-base font-medium">
+              Not enough data
+            </dd>
+          ) : (
+            <>
+              <dd className="mt-1 text-2xl font-medium tabular-nums">
+                {consistency.percent}%
+              </dd>
+              {consistency.qualifying < consistency.total ? (
+                <dd className="text-muted-foreground mt-0.5 text-sm tabular-nums">
+                  {consistency.qualifying} of {consistency.total} goals
+                </dd>
+              ) : null}
+            </>
+          )}
+        </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="bg-card rounded-2xl border p-4">
           <dt className="text-muted-foreground text-sm">Sessions</dt>
-          <dd className="mt-1 text-xl font-medium tabular-nums">{sessions}</dd>
+          <dd className="mt-1 text-2xl font-medium tabular-nums">{sessions}</dd>
         </div>
-        {minutes.withMinutes >= 3 ? (
-          <div className="bg-card rounded-2xl border p-4">
-            <dt className="text-muted-foreground text-sm">Minutes</dt>
-            <dd className="mt-1 text-xl font-medium tabular-nums">
+
+        {showMinutes ? (
+          <div className="bg-card col-span-2 rounded-2xl border p-4 sm:col-span-1">
+            <dt className="text-muted-foreground text-sm">Time</dt>
+            <dd className="mt-1 text-2xl font-medium tabular-nums">
               {formatMinutes(minutes.total)}
             </dd>
-            <dd className="text-muted-foreground mt-1 text-sm">
-              from {minutes.withMinutes} of {minutes.sessions} sessions
+            <dd className="text-muted-foreground mt-0.5 text-sm tabular-nums">
+              {minutes.withMinutes}/{minutes.sessions} logged
             </dd>
           </div>
         ) : null}
@@ -229,122 +257,62 @@ const Hero = ({ result }: { result: ProgressResult }) => {
   );
 };
 
-const WeeklyStrip = ({ rows }: { rows: ProgressWeeklyRow[] }) => {
-  if (rows.length === 0) {
-    return null;
-  }
+const GoalCard = ({ card }: { card: ProgressGoalCard }) => {
+  const meta = cardMetaCopy(card);
+  const consistency = formatConsistency(card.consistency);
+  const isMutedConsistency = card.consistency.percent === null;
 
   return (
-    <section aria-labelledby="progress-weekly-heading" className="mt-8">
-      <h2
-        id="progress-weekly-heading"
-        className="text-muted-foreground text-sm font-medium tracking-wide uppercase"
-      >
-        Weekly targets
-      </h2>
-      <ul className="mt-2 space-y-2">
-        {rows.map((row) => (
-          <li
-            key={row.goalId}
-            className="bg-card flex items-center gap-3 overflow-x-auto rounded-2xl border p-3"
-          >
-            <Link
-              to="/goals/$id"
-              params={{ id: row.goalId }}
-              className="focus-visible:ring-ring flex min-h-11 w-32 shrink-0 items-center gap-2 rounded-lg focus-visible:ring-1 focus-visible:outline-none"
-            >
-              <span aria-hidden="true" className="text-lg">
-                {row.emoji ?? (
-                  <span
-                    className="bg-muted-foreground/40 block size-2.5 rounded-full"
-                    style={
-                      row.color ? { backgroundColor: row.color } : undefined
-                    }
-                  />
-                )}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium">
-                  {row.name}
-                </span>
-                <span className="text-muted-foreground block text-sm">
-                  {row.target} {row.target === 1 ? "time" : "times"} a week
-                </span>
-              </span>
-            </Link>
-            <WeekCells
-              weeks={row.weeks}
-              label={`${row.name} weekly outcomes`}
-            />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-};
-
-const GoalCard = ({
-  card,
-  range,
-}: {
-  card: ProgressGoalCard;
-  range: ProgressRange;
-}) => (
-  <Link
-    to="/goals/$id"
-    params={{ id: card.goalId }}
-    className="bg-card focus-visible:ring-ring block min-h-11 rounded-2xl border p-4 focus-visible:ring-2 focus-visible:outline-none"
-  >
-    <div className="flex items-start gap-3">
-      <span aria-hidden="true" className="text-2xl">
-        {card.emoji ?? (
+    <Link
+      to="/goals/$id"
+      params={{ id: card.goalId }}
+      className="bg-card hover:border-foreground/25 hover:bg-muted/30 focus-visible:ring-ring flex min-h-11 flex-col justify-between gap-4 rounded-2xl border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <span
-            className="bg-muted-foreground/40 block size-3 rounded-full"
-            style={card.color ? { backgroundColor: card.color } : undefined}
-          />
-        )}
-      </span>
-      <div className="min-w-0 flex-1">
-        <span className="block truncate text-base font-medium">
-          {card.name}
-        </span>
-        <span className="text-muted-foreground block text-sm">
-          {streakCopy(card)}
+            aria-hidden="true"
+            className="flex size-8 shrink-0 items-center justify-center text-xl"
+          >
+            {card.emoji ?? (
+              <span
+                className="bg-muted-foreground/40 block size-3 rounded-full"
+                style={card.color ? { backgroundColor: card.color } : undefined}
+              />
+            )}
+          </span>
+          <div className="min-w-0">
+            <span className="block truncate text-base font-medium">
+              {card.name}
+            </span>
+            {meta ? (
+              <span className="text-muted-foreground block truncate text-sm tabular-nums">
+                {meta}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <span
+          className={cn(
+            "shrink-0 tabular-nums",
+            isMutedConsistency
+              ? "text-muted-foreground text-sm"
+              : "text-lg font-medium"
+          )}
+        >
+          {consistency}
         </span>
       </div>
-      <span
-        className={cn(
-          "shrink-0 rounded-full border px-2 py-1 text-sm",
-          card.priority === "high"
-            ? "border-foreground/30 text-foreground"
-            : "border-border text-muted-foreground"
-        )}
-      >
-        {PRIORITY_LABELS[card.priority]}
-      </span>
-    </div>
 
-    <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
       {card.unit === "week" ? (
-        <WeekCells
-          weeks={card.weeks}
-          label={`${card.name} last 7 weeks`}
-          compact
-        />
+        <WeekCells weeks={card.weeks} label={`${card.name} last 7 weeks`} />
       ) : (
         <DayDots card={card} />
       )}
-      <span className="shrink-0 text-right text-sm">
-        <span className="block font-medium tabular-nums">
-          {consistencyValue(card)}
-        </span>
-        <span className="text-muted-foreground block">
-          consistency · {range} days
-        </span>
-      </span>
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};
 
 const GoalCards = ({
   cards,
@@ -359,16 +327,21 @@ const GoalCards = ({
 
   return (
     <section aria-labelledby="progress-goals-heading" className="mt-8">
-      <h2
-        id="progress-goals-heading"
-        className="text-muted-foreground text-sm font-medium tracking-wide uppercase"
-      >
-        Goals
-      </h2>
+      <div className="flex items-baseline justify-between gap-3">
+        <h2
+          id="progress-goals-heading"
+          className="text-muted-foreground text-sm font-medium tracking-wide uppercase"
+        >
+          Goals
+        </h2>
+        <span className="text-muted-foreground text-sm tabular-nums">
+          Last {range} days
+        </span>
+      </div>
       <ul className="mt-2 grid gap-3 sm:grid-cols-2">
         {cards.map((card) => (
           <li key={card.goalId}>
-            <GoalCard card={card} range={range} />
+            <GoalCard card={card} />
           </li>
         ))}
       </ul>
@@ -450,7 +423,6 @@ export const ProgressScreen = ({
         <TodayBanner today={result.todayProgress} />
         <Hero result={result} />
         <ProgressHeatmap heatmap={result.heatmap} today={result.today} />
-        <WeeklyStrip rows={result.weekly} />
         <GoalCards cards={result.cards} range={result.range} />
       </>
     )}
