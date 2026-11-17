@@ -10,7 +10,9 @@ import {
 } from "@mostly/ui/components/dropdown-menu";
 import { Skeleton } from "@mostly/ui/components/skeleton";
 import { Link } from "@tanstack/react-router";
+import { useRef } from "react";
 
+import { SignOutDialog, useSignOutFlow } from "@/components/sign-out-confirmation";
 import { authClient } from "@/lib/auth-client";
 
 type SessionUser = typeof authClient.$Infer.Session.user;
@@ -39,6 +41,8 @@ const Avatar = ({ user, name }: { user: SessionUser; name: string }) => {
 
 const UserMenu = () => {
   const { data: session, isPending } = authClient.useSession();
+  const signOut = useSignOutFlow();
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   if (isPending) {
     return <Skeleton className="size-8 rounded-full" />;
@@ -52,43 +56,40 @@ const UserMenu = () => {
   const name = user.name || user.email;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            className="min-h-11 gap-2 rounded-full px-1.5"
-          />
-        }
-        aria-label={`Account menu for ${name}`}
-      >
-        <Avatar user={user} name={name} />
-        <span className="hidden max-w-32 truncate text-sm sm:inline">
-          {name}
-        </span>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="bg-card min-w-56"
-        aria-label="Account"
-      >
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-sm">
-            <span className="text-foreground block truncate text-sm">
-              {name}
-            </span>
-            <span className="block truncate">{user.email}</span>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="min-h-11 text-sm"
-            render={<Link to="/account" />}
-          >
-            Account and data
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          ref={triggerRef}
+          render={<Button variant="ghost" className="min-h-11 gap-2 rounded-full px-1.5" />}
+          aria-label={`Account menu for ${name}`}
+        >
+          <Avatar user={user} name={name} />
+          <span className="hidden max-w-32 truncate text-sm sm:inline">{name}</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="bg-card min-w-56"
+          aria-label="Account"
+          finalFocus={!signOut.open}
+        >
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="text-sm">
+              <span className="text-foreground block truncate text-sm">{name}</span>
+              <span className="block truncate">{user.email}</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="min-h-11 text-sm" render={<Link to="/account" />}>
+              Account and data
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="min-h-11 text-sm" onClick={signOut.handleOpen}>
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <SignOutDialog state={signOut} finalFocus={triggerRef} />
+    </>
   );
 };
 

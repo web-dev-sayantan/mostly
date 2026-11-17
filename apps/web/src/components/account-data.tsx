@@ -5,15 +5,16 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AccountSection } from "@/components/account-section";
+import {
+  SIGN_OUT_COPY,
+  SignOutButtons,
+  useSignOutFlow,
+} from "@/components/sign-out-confirmation";
 import { signInWithGoogle } from "@/lib/auth-client";
 import { CONFLICT_NOTICE_COPY, useSyncStatus } from "@/lib/offline";
 import type { SyncStatus } from "@/lib/offline";
 import { MOOD_LABELS } from "@/lib/session-details";
-import {
-  finishAccountDeletion,
-  finishSignOut,
-  prepareSignOut,
-} from "@/lib/sign-out";
+import { finishAccountDeletion } from "@/lib/sign-out";
 import { formatLogicalDate } from "@/lib/time";
 import { orpc } from "@/utils/orpc";
 
@@ -202,50 +203,22 @@ const SyncNotice = ({ status }: { status: SyncStatus }) => {
 };
 
 const SignOutControl = () => {
-  const [open, setOpen] = useState(false);
-  const [discardWarning, setDiscardWarning] = useState(false);
-  const [working, setWorking] = useState(false);
+  const flow = useSignOutFlow();
   const trigger = useRef<HTMLButtonElement>(null);
 
-  const close = () => {
-    setOpen(false);
-    setDiscardWarning(false);
-    setWorking(false);
+  const handleClose = () => {
+    flow.handleClose();
     requestAnimationFrame(() => trigger.current?.focus());
   };
 
-  const signOut = async () => {
-    setWorking(true);
-
-    try {
-      if (!discardWarning) {
-        const pending = await prepareSignOut();
-        if (pending > 0) {
-          setDiscardWarning(true);
-          setWorking(false);
-          return;
-        }
-      }
-
-      const signedOut = await finishSignOut();
-      if (!signedOut) {
-        setWorking(false);
-        toast.error("Couldn't sign out. Check your connection and try again.");
-      }
-    } catch {
-      setWorking(false);
-      toast.error("Couldn't sign out. Check your connection and try again.");
-    }
-  };
-
-  if (!open) {
+  if (!flow.open) {
     return (
       <Button
         ref={trigger}
         type="button"
         variant="outline"
         className="min-h-11 w-fit px-4 text-sm"
-        onClick={() => setOpen(true)}
+        onClick={flow.handleOpen}
       >
         Sign out
       </Button>
@@ -256,40 +229,16 @@ const SignOutControl = () => {
     <div className="bg-muted/50 grid gap-3 rounded-lg border p-3">
       <div>
         <p id="sign-out-heading" className="text-sm font-medium">
-          Sign out and clear this device?
+          {SIGN_OUT_COPY.heading}
         </p>
         <p id="sign-out-description" className="text-muted-foreground text-sm">
-          Saved sessions sync first. This device keeps nothing after you sign
-          out.
+          {SIGN_OUT_COPY.description}
         </p>
       </div>
-      {discardWarning ? (
-        <p role="alert" className="text-sm">
-          Some changes haven&apos;t synced. Signing out removes them from this
-          device.
-        </p>
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          autoFocus
-          aria-describedby="sign-out-description"
-          className="min-h-11 px-4 text-sm"
-          disabled={working}
-          onClick={signOut}
-        >
-          {discardWarning ? "Sign out and remove changes" : "Sign out"}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className="min-h-11 px-4 text-sm"
-          disabled={working}
-          onClick={close}
-        >
-          Keep this device signed in
-        </Button>
-      </div>
+      <SignOutButtons
+        state={{ ...flow, handleClose }}
+        confirmDescribedBy="sign-out-description"
+      />
     </div>
   );
 };
