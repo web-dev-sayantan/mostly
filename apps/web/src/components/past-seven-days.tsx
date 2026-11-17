@@ -1,6 +1,6 @@
 import { addLogicalDays } from "@mostly/domain";
 import { Link } from "@tanstack/react-router";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ChevronDown } from "lucide-react";
 
 import { formatLogicalDate } from "@/lib/time";
 
@@ -14,16 +14,11 @@ export const PastSevenDays = ({ today }: { today: string }) => (
       <CalendarDays aria-hidden="true" className="size-5 shrink-0" />
       <span className="min-w-0 flex-1">
         <span className="block text-base font-medium">Past 7 days</span>
-        <span className="text-muted-foreground block text-sm">
-          You can edit the last 7 days.
-        </span>
       </span>
-      <span
+      <ChevronDown
         aria-hidden="true"
-        className="text-muted-foreground text-sm group-open:rotate-180"
-      >
-        ▾
-      </span>
+        className="text-muted-foreground size-4 shrink-0 group-open:rotate-180 motion-safe:transition-transform"
+      />
     </summary>
     <ul className="border-t px-2 py-2">
       {lastSevenDays(today).map((date) => (

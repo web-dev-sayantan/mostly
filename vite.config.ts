@@ -1,7 +1,10 @@
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   test: {
+    alias: { "@": fileURLToPath(new URL("apps/web/src", import.meta.url)) },
     include: ["{apps,packages}/**/*.test.ts"],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },

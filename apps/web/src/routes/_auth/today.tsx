@@ -231,6 +231,11 @@ const TodayPage = () => {
   };
 
   const openDetails = (goalId: string) => {
+    if (openGoalId === goalId) {
+      setOpenGoalId(null);
+      focusDetailsTrigger();
+      return;
+    }
     if (undo?.goalId === goalId) {
       clearUndo();
     }

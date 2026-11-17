@@ -16,7 +16,6 @@ import {
   REMINDER_PERMISSION_COPY,
   shouldRequestPush,
   STARTER_GOALS,
-  TODAY_HINT_KEY,
 } from "@/lib/onboarding";
 import { enablePushReminders, isInstalledApp, pushPlatform } from "@/lib/push";
 import { detectedTimeZone } from "@/lib/time";
@@ -129,11 +128,6 @@ const OnboardingPage = () => {
         time: reminderTime || "21:30",
       });
       await client.onboarding.complete();
-      try {
-        localStorage.setItem(TODAY_HINT_KEY, "1");
-      } catch {
-        // The hint is a courtesy; onboarding still completed.
-      }
       await navigate({ to: "/today" });
     } catch (error) {
       setFinishError(
