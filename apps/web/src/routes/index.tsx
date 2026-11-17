@@ -31,7 +31,7 @@ const LandingPage = () => {
 
   return (
     <div className="grid min-h-svh justify-items-center pt-[max(var(--gutter),env(safe-area-inset-top))] pr-[max(var(--gutter),env(safe-area-inset-right))] pb-[max(var(--gutter),env(safe-area-inset-bottom))] pl-[max(var(--gutter),env(safe-area-inset-left))] [--gutter:clamp(0.75rem,3vw,2.5rem)]">
-      <div className="shadow-foreground/5 grid w-full max-w-[90rem] grid-rows-[auto_1fr] rounded-[clamp(1.75rem,4vw,3.5rem)] border bg-linear-[155deg,var(--card)_20%,color-mix(in_srgb,var(--card),var(--accent)_65%)] p-[clamp(1rem,3.4vw,3rem)] shadow-[0_1rem_3rem]">
+      <div className="shadow-foreground/5 grid w-full max-w-360 grid-rows-[auto_1fr] rounded-[clamp(1.75rem,4vw,3.5rem)] border bg-linear-[155deg,var(--card)_20%,color-mix(in_srgb,var(--card),var(--accent)_65%)] p-[clamp(1rem,3.4vw,3rem)] shadow-[0_1rem_3rem]">
         <header className="[&_button:focus-visible]:outline-ring flex flex-wrap items-center justify-between gap-2 [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-offset-4">
           <div className="flex items-center gap-2.5 text-xl font-bold tracking-tight">
             <img src="/icon.svg" alt="" width={36} height={36} />
@@ -47,7 +47,7 @@ const LandingPage = () => {
               A quiet record{" "}
               <span className="text-primary block">of what you did.</span>
             </h1>
-            <p className="mx-auto mt-5 max-w-[32ch] text-base leading-relaxed text-[color:color-mix(in_srgb,var(--muted-foreground),var(--foreground)_18%)] sm:mt-7 sm:text-lg">
+            <p className="mx-auto mt-5 max-w-[32ch] text-base leading-relaxed text-[color-mix(in_srgb,var(--muted-foreground),var(--foreground)_18%)] sm:mt-7 sm:text-lg">
               Track your goals, log your sessions, and see your progress over
               time.
             </p>
