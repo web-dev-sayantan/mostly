@@ -190,8 +190,7 @@ const GoalRow = ({
             Log another session
           </span>
         ) : null}
-        <CheckStatus done={done} />
-        <span aria-hidden="true" className="flex size-4 shrink-0 items-center">
+        <span className="flex shrink-0 items-center gap-2">
           {canEditDetails ? (
             <ChevronDown
               aria-hidden="true"
@@ -201,6 +200,7 @@ const GoalRow = ({
               )}
             />
           ) : null}
+          <CheckStatus done={done} />
         </span>
       </button>
       {description ? (
