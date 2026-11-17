@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@mostly/api": "workspace:*",
+    "@mostly/domain": "workspace:*",
     "@mostly/ui": "workspace:*",
     "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",

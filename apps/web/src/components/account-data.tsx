@@ -1,0 +1,403 @@
+import { Button } from "@mostly/ui/components/button";
+import { Input } from "@mostly/ui/components/input";
+import { useMutation } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+
+import { AccountSection } from "@/components/account-section";
+import {
+  SIGN_OUT_COPY,
+  SignOutButtons,
+  useSignOutFlow,
+} from "@/components/sign-out-confirmation";
+import { signInWithGoogle } from "@/lib/auth-client";
+import { CONFLICT_NOTICE_COPY, useSyncStatus } from "@/lib/offline";
+import type { SyncStatus } from "@/lib/offline";
+import { MOOD_LABELS } from "@/lib/session-details";
+import { finishAccountDeletion } from "@/lib/sign-out";
+import { formatLogicalDate } from "@/lib/time";
+import { orpc } from "@/utils/orpc";
+
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
+
+const formatLastSynced = (at: number | null): string => {
+  if (at === null) {
+    return "Not synced on this device yet";
+  }
+
+  const elapsed = Math.max(0, Date.now() - at);
+  if (elapsed < MINUTE_MS) {
+    return "Last synced just now";
+  }
+  if (elapsed < HOUR_MS) {
+    return `Last synced ${Math.floor(elapsed / MINUTE_MS)}m ago`;
+  }
+  if (elapsed < 24 * HOUR_MS) {
+    return `Last synced ${Math.floor(elapsed / HOUR_MS)}h ago`;
+  }
+  return `Last synced ${new Date(at).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  })}`;
+};
+
+const downloadExport = (exportedAt: string, document: unknown): void => {
+  const blob = new Blob([JSON.stringify(document, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = window.document.createElement("a");
+  link.href = url;
+  link.download = `mostly-export-${exportedAt.slice(0, 10)}.json`;
+  window.document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
+const signIn = async () => {
+  try {
+    await signInWithGoogle();
+  } catch (error) {
+    toast.error(
+      error instanceof Error ? error.message : "Could not start Google sign-in."
+    );
+  }
+};
+
+const losingEditCopy = (
+  local: SyncStatus["conflicts"][number]["local"]
+): string => {
+  if (local.deleted) {
+    return "Your edit removed this session.";
+  }
+  const details = [
+    local.minutes === null ? null : `${local.minutes} min`,
+    local.mood === null ? null : MOOD_LABELS[local.mood],
+  ].filter((part): part is string => part !== null);
+  return details.length > 0
+    ? `Your edit: ${details.join(" · ")}`
+    : "Your edit had no details.";
+};
+
+const SyncNotice = ({ status }: { status: SyncStatus }) => {
+  if (status.accountDeleted) {
+    return (
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-3 rounded-lg border p-3"
+      >
+        <div>
+          <p className="text-sm font-medium">This account was deleted</p>
+          <p className="text-muted-foreground text-sm">
+            Queued changes and saved data on this device were removed. Sign in
+            with another account to keep using Mostly.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 w-fit px-4 text-sm"
+          onClick={signIn}
+        >
+          Sign in
+        </Button>
+      </div>
+    );
+  }
+
+  if (status.authExpired) {
+    return (
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-3 rounded-lg border p-3"
+      >
+        <div>
+          <p className="text-sm font-medium">Your session expired</p>
+          <p className="text-muted-foreground text-sm">
+            Your queued changes stay on this device. Sign in to sync them.
+          </p>
+        </div>
+        {status.state === "offline" ? (
+          <p className="text-muted-foreground text-sm">
+            You&apos;re offline. Sign in when you&apos;re back online.
+          </p>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 w-fit px-4 text-sm"
+            onClick={signIn}
+          >
+            Sign in
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (status.conflicts.length > 0) {
+    return (
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-2 rounded-lg border p-3"
+      >
+        <p className="text-sm font-medium">{CONFLICT_NOTICE_COPY}</p>
+        <p className="text-muted-foreground text-sm">
+          A newer edit from another device won. Your local copy stays on this
+          device for seven days.
+        </p>
+        <ul className="grid gap-2 text-sm">
+          {status.conflicts.map((conflict) => {
+            const losing = conflict.local;
+
+            return (
+              <li key={conflict.opId} className="grid gap-1">
+                <span>
+                  {formatLogicalDate(conflict.logicalDate)} · kept until{" "}
+                  {new Date(conflict.expiresAt).toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+                <span className="text-muted-foreground">
+                  {losingEditCopy(losing)}
+                </span>
+                {losing.note ? (
+                  <span className="break-words">
+                    <span className="text-muted-foreground">Note: </span>
+                    {losing.note}
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  }
+
+  if (status.state === "error") {
+    return (
+      <div
+        aria-live="polite"
+        className="bg-muted/50 grid gap-3 rounded-lg border p-3"
+      >
+        <p className="text-sm">
+          Couldn&apos;t sync. Your changes are saved on this device.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-11 w-fit px-4 text-sm"
+          onClick={() => status.retry()}
+        >
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+const SignOutControl = () => {
+  const flow = useSignOutFlow();
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  const handleClose = () => {
+    flow.handleClose();
+    requestAnimationFrame(() => trigger.current?.focus());
+  };
+
+  if (!flow.open) {
+    return (
+      <Button
+        ref={trigger}
+        type="button"
+        variant="outline"
+        className="min-h-11 w-fit px-4 text-sm"
+        onClick={flow.handleOpen}
+      >
+        Sign out
+      </Button>
+    );
+  }
+
+  return (
+    <div className="bg-muted/50 grid gap-3 rounded-lg border p-3">
+      <div>
+        <p id="sign-out-heading" className="text-sm font-medium">
+          {SIGN_OUT_COPY.heading}
+        </p>
+        <p id="sign-out-description" className="text-muted-foreground text-sm">
+          {SIGN_OUT_COPY.description}
+        </p>
+      </div>
+      <SignOutButtons
+        state={{ ...flow, handleClose }}
+        confirmDescribedBy="sign-out-description"
+      />
+    </div>
+  );
+};
+
+const DeleteAccountControl = ({
+  exportDocument,
+  exporting,
+}: {
+  exportDocument: () => void;
+  exporting: boolean;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const trigger = useRef<HTMLButtonElement>(null);
+  const remove = useMutation(
+    orpc.account.delete.mutationOptions({
+      onSuccess: async () => {
+        await finishAccountDeletion();
+      },
+      onError: (error) => {
+        toast.error(error.message || "Could not delete the account.");
+      },
+    })
+  );
+
+  const close = () => {
+    setOpen(false);
+    setConfirmation("");
+    requestAnimationFrame(() => trigger.current?.focus());
+  };
+
+  if (!open) {
+    return (
+      <Button
+        ref={trigger}
+        type="button"
+        variant="destructive"
+        className="min-h-11 w-fit px-4 text-sm"
+        onClick={() => setOpen(true)}
+      >
+        Delete account
+      </Button>
+    );
+  }
+
+  return (
+    <div className="border-destructive/40 grid gap-3 rounded-lg border p-3">
+      <div className="grid gap-1">
+        <p id="delete-account-warning" className="text-sm font-medium">
+          This removes your account and every session. This can&apos;t be
+          undone.
+        </p>
+        <p className="text-muted-foreground text-sm">
+          Backups expire within 30 days.
+        </p>
+      </div>
+      <p className="text-sm">Export your data first?</p>
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-11 w-fit px-4 text-sm"
+        disabled={exporting}
+        onClick={exportDocument}
+      >
+        Download a copy of everything
+      </Button>
+      <div className="grid gap-1.5">
+        <label htmlFor="delete-account-confirm" className="text-sm font-medium">
+          Type DELETE to confirm
+        </label>
+        <Input
+          id="delete-account-confirm"
+          value={confirmation}
+          autoFocus
+          autoComplete="off"
+          spellCheck={false}
+          aria-describedby="delete-account-warning"
+          className="min-h-11 max-w-64 text-base"
+          onChange={(event) => setConfirmation(event.target.value)}
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="destructive"
+          aria-describedby="delete-account-warning"
+          className="min-h-11 px-4 text-sm"
+          disabled={confirmation !== "DELETE" || remove.isPending}
+          onClick={() => remove.mutate({ confirm: "DELETE" })}
+        >
+          {remove.isPending ? "Deleting…" : "Delete account"}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="min-h-11 px-4 text-sm"
+          disabled={remove.isPending}
+          onClick={close}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+export const DataControls = () => {
+  const status = useSyncStatus();
+  const exportData = useMutation(
+    orpc.account.export.mutationOptions({
+      onSuccess: (document) => {
+        downloadExport(document.exported_at, document);
+        toast.success("Export downloaded.");
+      },
+      onError: (error) => {
+        toast.error(error.message || "Could not prepare the export.");
+      },
+    })
+  );
+  const exportDocument = () => exportData.mutate();
+
+  return (
+    <AccountSection id="data" title="Data">
+      <SyncNotice status={status} />
+
+      <div className="grid gap-2">
+        <p className="text-sm">
+          Download a copy of everything: settings history, goals, schedules,
+          sessions, and outcomes.
+        </p>
+        <Button
+          type="button"
+          className="min-h-11 w-fit px-4 text-sm"
+          disabled={exportData.isPending}
+          onClick={exportDocument}
+        >
+          {exportData.isPending
+            ? "Preparing export…"
+            : "Download a copy of everything"}
+        </Button>
+      </div>
+
+      <div className="text-muted-foreground grid gap-1 text-sm">
+        <p>{formatLastSynced(status.lastSyncedAt)}</p>
+        {status.pendingCount > 0 ? (
+          <p>
+            {status.pendingCount}{" "}
+            {status.pendingCount === 1 ? "change" : "changes"} waiting to sync.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="grid gap-3 border-t pt-4">
+        <SignOutControl />
+        <DeleteAccountControl
+          exportDocument={exportDocument}
+          exporting={exportData.isPending}
+        />
+      </div>
+    </AccountSection>
+  );
+};

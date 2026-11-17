@@ -20,38 +20,58 @@ This project was created with [Better-T-Stack](https://github.com/AmanVarshney01
 
 ## Getting Started
 
-First, install the dependencies:
+Install Node.js, pnpm, and the [Turso CLI](https://docs.turso.tech/cli/installation), then install dependencies.
 
 ```bash
 pnpm install
 ```
 
-## Database Setup
+Create `apps/server/.env.local` with `BETTER_AUTH_SECRET` (at least 32 random characters), `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`. Generate the auth secret with `openssl rand -base64 32` and paste it into that file.
 
-This project uses SQLite with Drizzle ORM.
+Register `http://localhost:3003/api/auth/callback/google` as an authorized redirect URI on your Google OAuth web client.
 
-1. Start the local SQLite database (optional):
+Start the local database in a separate terminal.
 
 ```bash
 pnpm run db:local
 ```
 
-2. Update your `.env` file in the `apps/server` directory with the appropriate connection details if needed.
+The default development database URL is `http://127.0.0.1:8080`. Local Turso needs no auth token. For a hosted database, set `DATABASE_URL` and `DATABASE_AUTH_TOKEN` in `apps/server/.env.local` instead.
 
-3. Apply the committed migrations to your database:
+Apply the committed migrations, then start the app.
 
 ```bash
 pnpm run db:migrate
-```
-
-Then, run the development server:
-
-```bash
 pnpm run dev
 ```
 
-Open [http://localhost:3003](http://localhost:3003) in your browser to see the web application.
-The API is running at [http://localhost:3004](http://localhost:3004).
+Open [http://localhost:3003](http://localhost:3003). Alchemy starts Vite on port `3003` and the API Worker on port `3004`. The browser sends `/api` and `/rpc` requests through Vite, so sign-in and application requests share one browser origin. `BETTER_AUTH_URL` and `CORS_ORIGIN` default to `http://localhost:3003` during development. Explicit values in env files take precedence.
+
+Development state is stored locally under `packages/infra/.alchemy`. Local app startup uses Alchemy's local Cloudflare providers and needs no Cloudflare profile. Deployment uses the configured Cloudflare state store and provider credentials. Existing cloud-backed development state is retained when switching to this local state store.
+
+Ports `3003` and `3004` are fixed because the proxy and registered OAuth callback depend on them. Startup reports a port conflict instead of silently moving to another port.
+
+For separate frontend and backend terminals, run `pnpm run dev:server` followed by `pnpm run dev:web`. The frontend command starts bare Vite and uses the same API proxy.
+
+### Phone and PWA testing
+
+Set `DEV_PUBLIC_ORIGIN` to the HTTPS origin you open on your phone, for example `https://your-machine.your-tailnet.ts.net:8083`. Set it in `apps/server/.env.local`, or pass it when starting development.
+
+```bash
+DEV_PUBLIC_ORIGIN=https://your-machine.your-tailnet.ts.net:8083 pnpm run dev
+```
+
+Use Caddy or another HTTPS reverse proxy to forward that origin to `http://localhost:3003`. Vite forwards API traffic to the Worker. The public origin supplies the Vite allowed host and CORS origin, and the default auth and trusted origins. If you already set `BETTER_AUTH_URL` or `CORS_ORIGIN`, remove those development overrides to use the shared default, or set both to the public origin.
+
+Register `<DEV_PUBLIC_ORIGIN>/api/auth/callback/google` with Google as well. Restart development after changing env values. With bare Vite, pass `DEV_PUBLIC_ORIGIN` to `pnpm run dev:web` too.
+
+Service workers are opt-in during development to avoid cached app shells while editing. Enable them for offline or push testing.
+
+```bash
+DEV_PWA=true pnpm run dev
+```
+
+If an earlier dev session registered a service worker, unregister it in browser developer tools once. Production builds always include the service worker.
 
 ## UI Customization
 
@@ -81,21 +101,17 @@ If you want to add app-specific blocks instead of shared primitives, run the sha
 
 ## Sign-in
 
-Google is the only sign-in method. Create a Google OAuth web client and add
-`https://<server-origin>/api/auth/callback/google` as an authorized redirect URI, then set
-`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `apps/server/.env`. Only `openid`, `email`, and
-`profile` scopes are requested.
+Google is the only sign-in method. Create a Google OAuth web client and add `<BETTER_AUTH_URL>/api/auth/callback/google` as an authorized redirect URI, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `apps/server/.env.local`. Only `openid`, `email`, and `profile` scopes are requested.
 
-On an iOS standalone PWA the OAuth page opens in the system browser and returns to `/today`, so
-the sign-in flow finishes outside the installed app.
+On an iOS standalone PWA the OAuth page opens in the system browser and returns to `/today`, so the sign-in flow finishes outside the installed app.
 
 ## Environment Configuration
 
 Each app owns its environment schema in `.env.schema`. Varlock generates `src/env.ts` during installation; run `pnpm run env:generate` after changing a schema. Commit schemas, and keep secrets in ignored env files or your deployment platform.
 
-Import the generated `ENV` accessor in application code. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
+Workers read native bindings through `apps/server/src/env.server.ts`. The browser reads public configuration through `apps/web/src/env.public.ts`, which uses the current page origin in development. Standalone tools can import the generated `ENV` accessor. Shared database and auth packages receive configuration or initialized clients from the application. See [Varlock's monorepo guide](https://varlock.dev/guides/monorepos/).
 
-For Cloudflare, Alchemy loads and validates deployment inputs with `varlock/auto-load` in its Node/Bun deployment process. Worker code reads native bindings; web clients use the framework's public env API through `src/env.public.ts` where needed. Alchemy supplies resource URLs and managed database credentials. In-Worker Varlock protections are deferred until an official Alchemy integration is available; see [the non-Wrangler deployment guidance](https://varlock.dev/integrations/cloudflare/#non-wrangler-deploy-tools-alchemy-sst-pulumi).
+The infra package imports the server's env schema. Its dev, deploy, and destroy scripts validate and inject values once through `varlock run --inject vars` before Alchemy starts. Use those package scripts when passing Alchemy flags so validation also runs. Alchemy supplies resource URLs and passes the configured database credentials into the Worker. In-Worker Varlock protections are deferred until an official Alchemy integration is available. See [the non-Wrangler deployment guidance](https://varlock.dev/integrations/cloudflare/#non-wrangler-deploy-tools-alchemy-sst-pulumi).
 
 Bun's automatic env loading is disabled in `bunfig.toml`; the framework integration or server bootstrap loads Varlock. Node deployments must include Varlock and its dependencies alongside the app schema.
 
@@ -111,17 +127,17 @@ Run standalone Node/Bun tools that use Varlock from the owning app directory so 
 - Deploy: pnpm run deploy
 - Destroy: pnpm run destroy
 
-`alchemy profile edit` stores the selected Axiom, Cloudflare, Neon, PlanetScale, and/or Prisma provider profiles under `~/.alchemy`; no provider-specific setup command is required by this scaffold.
+Configure the Cloudflare profile for deployment. Profiles are stored under `~/.alchemy`.
 
-Deploys are staged and default to a personal `dev_<username>` stage. For production, run the deploy with an explicit stage from `packages/infra`:
+Development runs with `NODE_ENV=development` and defaults to a `dev_<username>` stage. Deploy and destroy run with `NODE_ENV=production` and default to a `live_<username>` stage. Use an explicit stage for production.
 
 ```bash
-cd packages/infra && pnpm exec alchemy deploy --stage production
+pnpm run deploy --stage production
 ```
 
 ### Production origins
 
-- Required after the first deploy: set `CORS_ORIGIN` in `apps/server/.env` to the exact deployed web origin, such as `https://app.example.com`, then deploy the server again.
+Set `BETTER_AUTH_URL` to the deployed API origin and `CORS_ORIGIN` to the deployed web origin in `apps/server/.env.production.local`, along with production credentials. These origins and database credentials are required in production. The web build receives the deployed API URL from Alchemy. Once the deployment URLs are known, update the origins and deploy again. Register the production Google callback URL too.
 
 ## Git Hooks and Formatting
 

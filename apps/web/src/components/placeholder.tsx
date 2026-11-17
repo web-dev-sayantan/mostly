@@ -1,4 +1,10 @@
-export function Placeholder({ title, detail }: { title: string; detail: string }) {
+export function Placeholder({
+  title,
+  detail,
+}: {
+  title: string;
+  detail: string;
+}) {
   return (
     <section className="py-4">
       <h1 className="text-[28px] leading-tight font-medium">{title}</h1>

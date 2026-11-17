@@ -42,6 +42,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 
 ### React & JSX
 
+- Use Tailwind CSS utilities in `className` for new and updated UI styling, including layout, typography, gradients, and interaction states. Reuse the project's semantic theme tokens for colors.
 - Use function components over class components
 - Call hooks at the top level only, never conditionally
 - Specify all dependencies in hook dependency arrays correctly

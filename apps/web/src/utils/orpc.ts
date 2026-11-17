@@ -7,10 +7,13 @@ import { toast } from "sonner";
 
 import { ENV } from "../env.public";
 
-export function createQueryClient() {
-  return new QueryClient({
+export const createQueryClient = () =>
+  new QueryClient({
     queryCache: new QueryCache({
       onError: (error, query) => {
+        if (query.meta?.suppressErrorToast) {
+          return;
+        }
         toast.error(`Error: ${error.message}`, {
           action: {
             label: "retry",
@@ -22,12 +25,11 @@ export function createQueryClient() {
       },
     }),
   });
-}
 
 export const queryClient = createQueryClient();
 
 export const link = new RPCLink({
-  url: `${ENV.VITE_SERVER_URL.replace(/\/$/, "")}/rpc`,
+  url: `${ENV.VITE_SERVER_URL.replace(/\/$/u, "")}/rpc`,
   fetch(url, options) {
     return fetch(url, {
       ...options,

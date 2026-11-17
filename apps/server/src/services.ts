@@ -1,5 +1,6 @@
 import { createAuth as createConfiguredAuth } from "@mostly/auth";
-import { type Database, createDb } from "@mostly/db";
+import { createDb } from "@mostly/db";
+import type { Database } from "@mostly/db";
 
 import { ENV } from "./env.server";
 

@@ -1,0 +1,224 @@
+import type { GoalDto } from "@mostly/api/routers/goals";
+import type { SettingValues } from "@mostly/domain";
+import { isBeforeRollover } from "@mostly/domain";
+import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+
+import type { LocalSession } from "@/lib/offline";
+import { TODAY_HINT_COPY, TODAY_HINT_KEY } from "@/lib/onboarding";
+import { isSessionReadOnly } from "@/lib/session-details";
+import type { TodayView } from "@/lib/today";
+import { dailyProgressPercent, todayProgressCopy } from "@/lib/today";
+
+import { NotScheduledToday } from "./not-scheduled-today";
+import { PastSevenDays } from "./past-seven-days";
+import { PushPermissionNudge } from "./push-permission-nudge";
+import { SessionDetails } from "./session-details";
+import { TodayGoalRow, WeeklyGoalRow } from "./today-goal-row";
+import { TodayHeader } from "./today-header";
+import { TodayReminderFallback } from "./today-reminder-fallback";
+import { TodaySyncFooter } from "./today-sync-footer";
+
+export interface PendingUndo {
+  goalId: string;
+  logicalDate: string;
+  name: string;
+}
+
+export const TodayScreen = ({
+  view,
+  today,
+  settings,
+  now,
+  hasAnyGoal,
+  undo,
+  announcement,
+  openGoalId,
+  onMarkDone,
+  onUndo,
+  onOpenDetails,
+  onCloseDetails,
+  onRemoved,
+  onRegisterAction,
+}: {
+  view: TodayView;
+  today: string;
+  settings: SettingValues;
+  now: Date;
+  hasAnyGoal: boolean;
+  undo: PendingUndo | null;
+  announcement: string;
+  openGoalId: string | null;
+  onMarkDone: (goal: GoalDto) => void;
+  onUndo: () => void;
+  onOpenDetails: (goalId: string) => void;
+  onCloseDetails: () => void;
+  onRemoved: (goalName: string) => void;
+  onRegisterAction: (goalId: string, node: HTMLButtonElement | null) => void;
+}) => {
+  const [showHint, setShowHint] = useState(() => {
+    try {
+      return localStorage.getItem(TODAY_HINT_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const dismissHint = () => {
+    setShowHint(false);
+    try {
+      localStorage.setItem(TODAY_HINT_KEY, "0");
+    } catch {
+      // The hint returns next open if storage is unavailable.
+    }
+  };
+  const hasVisibleGoals =
+    view.todayGoals.length > 0 || view.weeklyGoals.length > 0;
+  const late = isBeforeRollover(now, {
+    timeZone: settings.timeZone,
+    rolloverHour: settings.dayRolloverHour,
+  });
+  const progressCopy = todayProgressCopy(view);
+  const activeUndo = undo?.logicalDate === today ? undo : null;
+  const emptyCopy = hasAnyGoal
+    ? "Nothing scheduled today."
+    : "Add the first thing you want to keep doing.";
+  const detailsFor = (goal: GoalDto, session: LocalSession | null) => {
+    if (!session || openGoalId !== goal.id) {
+      return;
+    }
+    return (
+      <SessionDetails
+        key={`${goal.id}-${session.id}`}
+        panelId={`today-panel-${goal.id}`}
+        goalName={goal.name}
+        session={session}
+        logicalDate={session.logicalDate}
+        today={today}
+        readOnly={isSessionReadOnly(goal, session.logicalDate, today)}
+        onClose={onCloseDetails}
+        onRemoved={onRemoved}
+      />
+    );
+  };
+
+  return (
+    <div className="max-w-[720px]">
+      <section className="py-4">
+        <TodayHeader
+          today={today}
+          late={late}
+          rolloverHour={settings.dayRolloverHour}
+          progressCopy={progressCopy}
+          progressPercent={dailyProgressPercent(
+            view.dailyDone,
+            view.dailyTotal
+          )}
+          showBar={view.dailyTotal > 0}
+        />
+
+        {showHint && hasVisibleGoals ? (
+          <aside
+            aria-label="Getting started"
+            className="bg-muted/50 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border p-4 text-sm"
+          >
+            <p className="min-w-0 flex-1">{TODAY_HINT_COPY}</p>
+            <button
+              type="button"
+              onClick={dismissHint}
+              className="focus-visible:ring-ring min-h-11 rounded-full px-3 text-sm underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              Dismiss
+            </button>
+          </aside>
+        ) : null}
+
+        <TodayReminderFallback />
+        <PushPermissionNudge />
+
+        <p className="sr-only" aria-live="polite" aria-atomic="true">
+          {announcement}
+        </p>
+
+        {view.activeGoalCount === 0 ? (
+          <div className="bg-card mt-6 rounded-2xl border p-6">
+            <p className="text-muted-foreground text-sm">{emptyCopy}</p>
+            {hasAnyGoal ? null : (
+              <Link
+                to="/goals"
+                className="bg-primary text-primary-foreground focus-visible:ring-ring mt-4 inline-flex min-h-11 items-center rounded-full px-4 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Add a goal
+              </Link>
+            )}
+          </div>
+        ) : (
+          <>
+            <section aria-labelledby="today-heading" className="mt-6">
+              <h2
+                id="today-heading"
+                tabIndex={-1}
+                className="text-muted-foreground focus-visible:ring-ring rounded-lg text-sm font-medium tracking-wide uppercase focus-visible:ring-2 focus-visible:outline-none"
+              >
+                Today
+              </h2>
+              {view.todayGoals.length > 0 ? (
+                <ul className="mt-2 space-y-2">
+                  {view.todayGoals.map((entry) => (
+                    <TodayGoalRow
+                      key={entry.goal.id}
+                      entry={entry}
+                      detailsOpen={openGoalId === entry.goal.id}
+                      details={detailsFor(entry.goal, entry.session)}
+                      undoActive={activeUndo?.goalId === entry.goal.id}
+                      onMarkDone={onMarkDone}
+                      onOpenDetails={onOpenDetails}
+                      onUndo={onUndo}
+                      onRegisterAction={onRegisterAction}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Nothing scheduled today.
+                </p>
+              )}
+            </section>
+
+            {view.weeklyGoals.length > 0 ? (
+              <section aria-labelledby="week-heading" className="mt-8">
+                <h2
+                  id="week-heading"
+                  className="text-muted-foreground text-sm font-medium tracking-wide uppercase"
+                >
+                  This week
+                </h2>
+                <ul className="mt-2 space-y-2">
+                  {view.weeklyGoals.map((entry) => (
+                    <WeeklyGoalRow
+                      key={entry.goal.id}
+                      entry={entry}
+                      detailsOpen={openGoalId === entry.goal.id}
+                      details={detailsFor(entry.goal, entry.session)}
+                      undoActive={activeUndo?.goalId === entry.goal.id}
+                      onMarkDone={onMarkDone}
+                      onOpenDetails={onOpenDetails}
+                      onUndo={onUndo}
+                      onRegisterAction={onRegisterAction}
+                    />
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </>
+        )}
+      </section>
+
+      <div className="mt-8 grid gap-2">
+        <PastSevenDays today={today} />
+        <NotScheduledToday date={today} />
+      </div>
+
+      <TodaySyncFooter />
+    </div>
+  );
+};
