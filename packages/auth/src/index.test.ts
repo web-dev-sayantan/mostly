@@ -13,13 +13,41 @@ const config: AuthConfig = {
 };
 
 describe("createAuth", () => {
+  it.each([
+    { url: "http://localhost:3003", secure: false, sameSite: "lax" },
+    { url: "http://127.0.0.1:3003", secure: false, sameSite: "lax" },
+    { url: "http://[::1]:3003", secure: false, sameSite: "lax" },
+    { url: "https://dev.example.com", secure: true, sameSite: "none" },
+    { url: "https://api.example.com", secure: true, sameSite: "none" },
+  ])("sets cookies for $url", async ({ url, secure, sameSite }) => {
+    const { db, close } = await createTestDb();
+
+    try {
+      const auth = createAuth({ ...config, BETTER_AUTH_URL: url }, db);
+      const context = await auth.$context;
+
+      expect(context.authCookies.sessionToken.attributes).toMatchObject({
+        secure,
+        sameSite,
+        httpOnly: true,
+      });
+      expect(
+        context.authCookies.sessionToken.name.startsWith("__Secure-")
+      ).toBe(secure);
+    } finally {
+      close();
+    }
+  });
+
   it("offers Google with identity scopes as the only way to sign in", async () => {
     const { db, close } = await createTestDb();
 
     try {
       const auth = createAuth(config, db);
 
-      expect(Object.keys(auth.options.socialProviders ?? {})).toEqual(["google"]);
+      expect(Object.keys(auth.options.socialProviders ?? {})).toEqual([
+        "google",
+      ]);
       expect(auth.options.socialProviders?.google).toMatchObject({
         clientId: "google-client-id",
         clientSecret: "google-client-secret",

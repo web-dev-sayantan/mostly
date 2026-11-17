@@ -4,21 +4,24 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vite-plus";
 
-// Caddy publishes the dev server over Tailscale HTTPS (see the Homebrew Caddyfile).
-// Override the host when the machine's tailnet name differs.
-const tailscaleHost = process.env.TAILSCALE_HOST || "macbook.grouse-ph.ts.net";
+// Alchemy inherits these values from the server's Varlock schema.
+const devOrigin = new URL(
+  process.env.DEV_PUBLIC_ORIGIN ||
+    process.env.CORS_ORIGIN ||
+    "http://localhost:3003"
+);
 
 export default defineConfig({
   server: {
-    allowedHosts: [tailscaleHost],
+    allowedHosts: [devOrigin.hostname],
     cors: {
       origin: [
-        `https://${tailscaleHost}:8083`,
+        devOrigin.origin,
         /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/u,
       ],
     },
-    host: true,
     port: 3003,
+    strictPort: true,
     proxy: {
       "/api": "http://localhost:3004",
       "/rpc": "http://localhost:3004",
@@ -63,7 +66,7 @@ export default defineConfig({
         ],
       },
       pwaAssets: { disabled: false, config: true },
-      devOptions: { enabled: true },
+      devOptions: { enabled: process.env.DEV_PWA === "true" },
     }),
   ],
 });

@@ -11,11 +11,16 @@ export interface AuthConfig {
   GOOGLE_CLIENT_SECRET: string;
 }
 
-export function createAuth(
+export const createAuth = (
   env: AuthConfig,
   database: Database,
-  desktopOrigins: readonly string[] = [],
-) {
+  desktopOrigins: readonly string[] = []
+) => {
+  const authUrl = new URL(env.BETTER_AUTH_URL);
+  const isLocalHttp =
+    authUrl.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(authUrl.hostname);
+
   return betterAuth({
     database: drizzleAdapter(database, {
       provider: "sqlite",
@@ -33,14 +38,15 @@ export function createAuth(
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
     advanced: {
+      useSecureCookies: !isLocalHttp,
       defaultCookieAttributes: {
-        sameSite: "none",
-        secure: true,
+        sameSite: isLocalHttp ? "lax" : "none",
+        secure: !isLocalHttp,
         httpOnly: true,
       },
     },
     plugins: [],
   });
-}
+};
 
 export type Session = ReturnType<typeof createAuth>["$Infer"]["Session"];

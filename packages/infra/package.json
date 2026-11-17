@@ -5,8 +5,8 @@
   "scripts": {
     "check-types": "tsc --noEmit",
     "dev": "NODE_ENV=development varlock run --inject vars -- alchemy dev",
-    "deploy": "alchemy deploy",
-    "destroy": "alchemy destroy"
+    "deploy": "NODE_ENV=production varlock run --inject vars -- alchemy deploy",
+    "destroy": "NODE_ENV=production varlock run --inject vars -- alchemy destroy"
   },
   "dependencies": {
     "zod": "catalog:"
