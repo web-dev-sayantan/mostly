@@ -56,6 +56,12 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
   - Include keyboard event handlers alongside mouse events
   - Use semantic elements (`<button>`, `<nav>`, etc.) instead of divs with roles
 
+### Product UI copy
+
+- Keep UI copy minimal across the project. Each visible line should help the user act or understand a meaningful state.
+- Use one clear representation of information: weekly progress dots carry the count; Today rows need no cadence subtitle. Keep configuration details in goal management.
+- Prefer self-explanatory controls over instructional hints. Omit filler such as "More sessions are welcome" and "You can edit the last 7 days." Preserve accessible labels, error messages, and meaningful exceptions.
+
 ### Error Handling & Debugging
 
 - Remove `console.log`, `debugger`, and `alert` statements from production code

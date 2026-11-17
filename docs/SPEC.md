@@ -170,14 +170,14 @@ It is not a task manager, a social habit game, or a productivity scoreboard. It 
 - Date line: "Tuesday, 20 October." Logical date, not wall-clock date. Between midnight and rollover, append "· still open until the rollover time."
 - Progress: "3 of 5 done" plus a thin bar. Counts today's daily/weekday goals only. If the user only has weekly targets, show "2 weekly targets" instead of a 0/0 bar.
 - **Today** section: daily and weekday goals scheduled today. Sorted by priority (high → low), then creation order.
-- **This week** section: weekly-target goals not yet met, with progress dots and "2 of 4 this week." If the week has fewer active days than the target, show "Not scored this week" instead of progress; sessions still count in history. Goals with the target met show "Target met" and a "Log another session" cue on the full-row action.
+- **This week** section: weekly-target goals with progress dots. Counts are available to assistive technology without repeating them as visible text. If the week has fewer active days than the target, show "Not scored this week" instead of progress; sessions still count in history. Filled progress dots indicate a met target; the full-row action still records a session today.
 - **Not scheduled today** (collapsed by default): weekday goals that are off today. Tapping opens the day detail so the user can log an extra session if they did it anyway. This keeps the main list focused without punishing extra effort.
 - Footer: **Past 7 days** link.
 - Bottom navigation: Today, Progress, Goals, Account.
 
 **Goal row:**
 
-- Emoji or color dot, goal name, one line of cadence context (`Daily`, `Mon / Wed / Fri`, `2 of 4 this week`).
+- Emoji or color dot and goal name. Show a subtitle only for recorded session details, not cadence or repeated progress counts.
 - The full row is one button, with hover, press, and keyboard focus feedback. Tap anywhere = done. No confirmation. The check circle on the right is a visual status indicator.
 - A small dot indicates details exist (minutes/note/mood).
 - Done rows stay in place, visually muted, with a check. Tapping the row toggles details open/closed, indicated by a chevron; **Mark as not done** lives inside the details panel, not on the main tap target.
@@ -190,7 +190,7 @@ It is not a task manager, a social habit game, or a productivity scoreboard. It 
 - **Nothing scheduled:** "Nothing scheduled today." No rest-day language.
 - **Partial:** The header shows "3 of 5 done." No per-tap toast.
 - **All done:** "That's the day. 5 of 5." If a weekly target is still open, say "Today's list is done. 1 weekly target still open." Quiet, no confetti storm.
-- **Weekly target met:** "Target met. More sessions are welcome."
+- **Weekly target met:** filled progress dots; no extra explanatory copy.
 - **Offline:** slim banner "Offline — saved on this device." No blocking modal.
 - **Sync pending/error:** subtle status in the footer; retry automatic, manual retry available.
 - **Archived goals (from the day after archiving):** hidden from Today.
@@ -349,7 +349,7 @@ Three short steps, skippable where possible:
 2. **Pick a few things to keep doing.** Starter chips: Reading, Guitar, Singing, Coding, Exercise, Meditation, Journaling, Language, plus a custom field. Suggested 3–5; no hard cap. Each starts as **Daily / Medium priority**; a small "Change cadence" chip opens cadence options.
 3. **Choose a reminder time.** Default 9:30 PM. "Not now" is allowed. On Android/desktop, request permission after this choice in a user gesture. On iOS, set the time now and request permission after the app is installed and the first session is logged.
 
-Then land on Today with a single dismissible hint: "Tap a goal when you've done it. Details are optional." Install prompt appears after the first session (or second visit if no session yet), not during onboarding.
+Then land on Today. Goal rows communicate their interaction through their controls. Install prompt appears after the first session (or second visit if no session yet), not during onboarding.
 
 ### 7.9 Navigation & states
 
@@ -697,7 +697,7 @@ user 1 ─── * goal 1 ─── * session
 | Weekly no session | "No session" |
 | Weekly not scored | "Not enough days this week" |
 | Streak | "12 days in a row" / "Best: 18 days" / "No streak yet" |
-| Backfill | "Past 7 days" / "You can edit the last 7 days." |
+| Backfill | "Past 7 days" |
 | Read-only | "This day is read-only." |
 | Reminder permission | "One reminder a day. No streak guilt, no spam." |
 | Reminder | "2 goals left today. Close the day when you're ready." |

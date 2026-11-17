@@ -27,7 +27,6 @@ import {
 } from "@/components/session-details-inline";
 import type { SessionDetailValues } from "@/components/session-details-inline";
 import { cacheDayDetail, cachedDayDetail } from "@/lib/day-cache";
-import { cadenceSummary } from "@/lib/goals";
 import {
   cacheServerSessions,
   deleteLocalSession,
@@ -281,11 +280,7 @@ const DayRow = ({
   const [editing, setEditing] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const row = useRef<HTMLLIElement>(null);
-  const subtitle = [
-    meta,
-    goal.archivedOn ? "Archived" : null,
-    cadenceSummary(goal.cadence),
-  ]
+  const subtitle = [meta, goal.archivedOn ? "Archived" : null]
     .filter(Boolean)
     .join(" · ");
   const detailText = session
@@ -341,9 +336,11 @@ const DayRow = ({
             <span className="block truncate text-base font-medium">
               {goal.name}
             </span>
-            <span className="text-muted-foreground block text-sm">
-              {subtitle}
-            </span>
+            {subtitle ? (
+              <span className="text-muted-foreground block text-sm">
+                {subtitle}
+              </span>
+            ) : null}
             <SessionDetails session={session} />
           </span>
           <StatusLabel status="done" />
@@ -353,7 +350,9 @@ const DayRow = ({
           <GoalMark goal={goal} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-base font-medium">{goal.name}</p>
-            <p className="text-muted-foreground text-sm">{subtitle}</p>
+            {subtitle ? (
+              <p className="text-muted-foreground text-sm">{subtitle}</p>
+            ) : null}
             {session ? <SessionDetails session={session} /> : null}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">

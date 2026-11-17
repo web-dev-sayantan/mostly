@@ -3,18 +3,13 @@ import { cn } from "@mostly/ui/lib/utils";
 import { Check, ChevronDown } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { cadenceSummary } from "@/lib/goals";
 import {
   checkButtonLabel,
   describeSession,
   detailsSummary,
 } from "@/lib/session-details";
 import type { TodayGoal, WeeklyGoal } from "@/lib/today";
-import {
-  hasSessionDetails,
-  weeklyCountCopy,
-  weeklyTargetCopy,
-} from "@/lib/today";
+import { hasSessionDetails, weeklyCountCopy } from "@/lib/today";
 
 const GoalMark = ({ goal }: { goal: GoalDto }) => (
   <span
@@ -136,6 +131,7 @@ const GoalRow = ({
   goal,
   session,
   logAnother = false,
+  progressId,
   children,
   detailsOpen,
   undoActive,
@@ -148,6 +144,7 @@ const GoalRow = ({
   goal: GoalDto;
   session: TodayGoal["session"];
   logAnother?: boolean;
+  progressId?: string;
   children: ReactNode;
 }) => {
   const done = session !== null;
@@ -178,18 +175,15 @@ const GoalRow = ({
         }}
         aria-label={label}
         aria-describedby={
-          description ? `today-description-${goal.id}` : undefined
+          [description ? `today-description-${goal.id}` : null, progressId]
+            .filter(Boolean)
+            .join(" ") || undefined
         }
         aria-expanded={canEditDetails ? detailsOpen : undefined}
         aria-controls={canEditDetails ? `today-panel-${goal.id}` : undefined}
         className="hover:bg-muted/50 active:bg-muted focus-visible:ring-ring flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-2xl px-4 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset disabled:cursor-default"
       >
         {children}
-        {logAnother && !done ? (
-          <span className="text-muted-foreground max-w-24 text-right text-sm">
-            Log another session
-          </span>
-        ) : null}
         <span className="flex shrink-0 items-center gap-2">
           {canEditDetails ? (
             <ChevronDown
@@ -224,7 +218,7 @@ export const TodayGoalRow = ({
   entry,
   ...props
 }: TodayRowProps & { entry: TodayGoal }) => {
-  const { goal, cadence, session } = entry;
+  const { goal, session } = entry;
   const done = session !== null;
   const detailsDot = hasSessionDetails(session);
   const detailsSupported = Boolean(props.onOpenDetails);
@@ -239,10 +233,11 @@ export const TodayGoalRow = ({
           done={done}
           showDetailsDot={detailsDot && detailsSupported}
         />
-        <span className="text-muted-foreground block truncate text-sm">
-          {cadenceSummary(cadence)}
-          {summary ? ` · ${summary}` : ""}
-        </span>
+        {summary ? (
+          <span className="text-muted-foreground block truncate text-sm">
+            {summary}
+          </span>
+        ) : null}
       </span>
     </>
   );
@@ -260,9 +255,13 @@ const ProgressDots = ({ entry }: { entry: WeeklyGoal }) => {
   }
 
   return (
-    <span aria-hidden="true" className="mt-1.5 flex gap-1">
+    <span className="mt-1.5 flex gap-1">
+      <span id={`weekly-progress-${entry.goal.id}`} className="sr-only">
+        {weeklyCountCopy(entry)}
+      </span>
       {Array.from({ length: entry.target }, (_, index) => (
         <span
+          aria-hidden="true"
           key={`${entry.goal.id}-dot-${index}`}
           className={cn(
             "size-2 rounded-full",
@@ -282,8 +281,6 @@ export const WeeklyGoalRow = ({
   const done = session !== null;
   const detailsDot = hasSessionDetails(session);
   const detailsSupported = Boolean(props.onOpenDetails);
-  const status = weeklyTargetCopy(entry);
-  const countCopy = entry.scored && entry.met ? weeklyCountCopy(entry) : null;
   const summary = session ? detailsSummary(session) : null;
 
   const content = (
@@ -295,15 +292,11 @@ export const WeeklyGoalRow = ({
           done={done}
           showDetailsDot={detailsDot && detailsSupported}
         />
-        <span className="text-muted-foreground block text-sm">
-          {status}
-          {entry.scored && entry.met ? ". More sessions are welcome." : null}
-        </span>
-        {countCopy ? (
+        {entry.scored ? null : (
           <span className="text-muted-foreground block text-sm">
-            {countCopy}
+            Not scored this week
           </span>
-        ) : null}
+        )}
         {summary ? (
           <span className="text-muted-foreground block text-sm">{summary}</span>
         ) : null}
@@ -313,7 +306,13 @@ export const WeeklyGoalRow = ({
   );
 
   return (
-    <GoalRow {...props} goal={goal} session={session} logAnother={entry.met}>
+    <GoalRow
+      {...props}
+      goal={goal}
+      session={session}
+      logAnother={entry.met}
+      progressId={entry.scored ? `weekly-progress-${goal.id}` : undefined}
+    >
       {content}
     </GoalRow>
   );

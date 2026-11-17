@@ -14,9 +14,6 @@ export const PastSevenDays = ({ today }: { today: string }) => (
       <CalendarDays aria-hidden="true" className="size-5 shrink-0" />
       <span className="min-w-0 flex-1">
         <span className="block text-base font-medium">Past 7 days</span>
-        <span className="text-muted-foreground block text-sm">
-          You can edit the last 7 days.
-        </span>
       </span>
       <span
         aria-hidden="true"
