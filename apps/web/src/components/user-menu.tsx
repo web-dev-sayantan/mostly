@@ -8,12 +8,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@mostly/ui/components/dropdown-menu";
-import { Skeleton } from "@mostly/ui/components/skeleton";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouteContext } from "@tanstack/react-router";
 import { useRef } from "react";
 
-import { SignOutDialog, useSignOutFlow } from "@/components/sign-out-confirmation";
-import { authClient } from "@/lib/auth-client";
+import {
+  SignOutDialog,
+  useSignOutFlow,
+} from "@/components/sign-out-confirmation";
+import type { authClient } from "@/lib/auth-client";
 
 type SessionUser = typeof authClient.$Infer.Session.user;
 
@@ -40,13 +42,9 @@ const Avatar = ({ user, name }: { user: SessionUser; name: string }) => {
 };
 
 const UserMenu = () => {
-  const { data: session, isPending } = authClient.useSession();
+  const { session } = useRouteContext({ from: "/_auth" });
   const signOut = useSignOutFlow();
   const triggerRef = useRef<HTMLButtonElement>(null);
-
-  if (isPending) {
-    return <Skeleton className="size-8 rounded-full" />;
-  }
 
   if (!session) {
     return null;
@@ -60,11 +58,18 @@ const UserMenu = () => {
       <DropdownMenu>
         <DropdownMenuTrigger
           ref={triggerRef}
-          render={<Button variant="ghost" className="min-h-11 gap-2 rounded-full px-1.5" />}
+          render={
+            <Button
+              variant="ghost"
+              className="min-h-11 gap-2 rounded-full px-1.5"
+            />
+          }
           aria-label={`Account menu for ${name}`}
         >
           <Avatar user={user} name={name} />
-          <span className="hidden max-w-32 truncate text-sm sm:inline">{name}</span>
+          <span className="hidden max-w-32 truncate text-sm sm:inline">
+            {name}
+          </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
@@ -74,15 +79,23 @@ const UserMenu = () => {
         >
           <DropdownMenuGroup>
             <DropdownMenuLabel className="text-sm">
-              <span className="text-foreground block truncate text-sm">{name}</span>
+              <span className="text-foreground block truncate text-sm">
+                {name}
+              </span>
               <span className="block truncate">{user.email}</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="min-h-11 text-sm" render={<Link to="/account" />}>
+            <DropdownMenuItem
+              className="min-h-11 text-sm"
+              render={<Link to="/account" />}
+            >
               Account and data
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="min-h-11 text-sm" onClick={signOut.handleOpen}>
+            <DropdownMenuItem
+              className="min-h-11 text-sm"
+              onClick={signOut.handleOpen}
+            >
               Sign out
             </DropdownMenuItem>
           </DropdownMenuGroup>
