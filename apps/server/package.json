@@ -3,7 +3,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc -b ../../packages/api && tsdown",
+    "build": "tsc -b ../../packages/api && vp pack",
     "check-types": "tsc -b ../../packages/api && tsc --noEmit",
     "compile": "bun build --compile --no-compile-autoload-dotenv --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "env:generate": "varlock codegen"
@@ -26,7 +26,6 @@
     "@mostly/config": "workspace:*",
     "@mostly/infra": "workspace:*",
     "@types/node": "^26.4.1",
-    "tsdown": "^0.23.0",
     "typescript": "catalog:"
   }
 }
