@@ -45,11 +45,11 @@ pnpm run db:migrate
 pnpm run dev
 ```
 
-Open [http://localhost:3003](http://localhost:3003). Alchemy starts Vite on port `3003` and the API Worker on port `3004`. The browser sends `/api` and `/rpc` requests through Vite, so sign-in and application requests share one browser origin. `BETTER_AUTH_URL` and `CORS_ORIGIN` default to `http://localhost:3003` during development. Explicit values in env files take precedence.
+Open [http://localhost:3003](http://localhost:3003). Alchemy starts Vite on port `3003` and the API Worker on port `4003`. The browser sends `/api` and `/rpc` requests through Vite, so sign-in and application requests share one browser origin. `BETTER_AUTH_URL` and `CORS_ORIGIN` default to `http://localhost:3003` during development. Explicit values in env files take precedence.
 
 Development state is stored locally under `packages/infra/.alchemy`. Local app startup uses Alchemy's local Cloudflare providers and needs no Cloudflare profile. Deployment uses the configured Cloudflare state store and provider credentials. Existing cloud-backed development state is retained when switching to this local state store.
 
-Ports `3003` and `3004` are fixed because the proxy and registered OAuth callback depend on them. Startup reports a port conflict instead of silently moving to another port.
+Ports `3003` and `4003` are fixed because the proxy and registered OAuth callback depend on them. Startup reports a port conflict instead of silently moving to another port.
 
 For separate frontend and backend terminals, run `pnpm run dev:server` followed by `pnpm run dev:web`. The frontend command starts bare Vite and uses the same API proxy.
 
@@ -72,6 +72,12 @@ DEV_PWA=true pnpm run dev
 ```
 
 If an earlier dev session registered a service worker, unregister it in browser developer tools once. Production builds always include the service worker.
+
+### Lighthouse testing
+
+Run Lighthouse against the deployed app or a production build served with `pnpm --filter web serve`. Use a clean Chrome profile with extensions disabled, then sign in before auditing `/today`. For local preview, build with `pnpm --filter web build` and configure the built app and auth server for the preview origin before signing in.
+
+TanStack Devtools are opt-in during development. Start the app with `VITE_DEVTOOLS=true pnpm run dev` to show the overlays.
 
 ## UI Customization
 
