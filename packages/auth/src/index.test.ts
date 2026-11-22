@@ -5,7 +5,7 @@ import { createAuth } from "./index";
 import type { AuthConfig } from "./index";
 
 const config: AuthConfig = {
-  BETTER_AUTH_URL: "http://localhost:3004",
+  BETTER_AUTH_URL: "http://localhost:4003",
   BETTER_AUTH_SECRET: "test-secret-that-is-long-enough-to-pass",
   CORS_ORIGIN: "http://localhost:3003",
   GOOGLE_CLIENT_ID: "google-client-id",

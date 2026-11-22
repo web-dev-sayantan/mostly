@@ -33,7 +33,7 @@ export const server = Cloudflare.Worker("server", {
     REMINDER_RUN_SECRET: optionalSecret("REMINDER_RUN_SECRET"),
   },
   dev: {
-    port: 3004,
+    port: 4003,
     strictPort: true,
   },
 });
