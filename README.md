@@ -53,6 +53,28 @@ Ports `3003` and `4003` are fixed because the proxy and registered OAuth callbac
 
 For separate frontend and backend terminals, run `pnpm run dev:server` followed by `pnpm run dev:web`. The frontend command starts bare Vite and uses the same API proxy.
 
+### Local development sign-in
+
+To test locally without Google OAuth (for example, in automated or agent runs), enable the local development account in `apps/server/.env.local` or pass it when starting development:
+
+```bash
+DEV_AUTH_ENABLED=true pnpm run dev
+```
+
+Configure the local account identity through the Varlock server config (`apps/server/.env.local` or shell env):
+
+- `DEV_AUTH_ENABLED=true` (defaults to `false`)
+- `DEV_AUTH_EMAIL=dev@mostly.local` (default)
+- `DEV_AUTH_NAME="Local Dev"` (default)
+
+When `DEV_AUTH_ENABLED=true` in development, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are not required. Sign in either by clicking the local dev button on `/` or via HTTP:
+
+```bash
+curl -c cookies.txt -X POST -H "Content-Type: application/json" -d '{}' http://localhost:3003/api/auth/dev/sign-in
+```
+
+This issues a normal Better Auth session cookie backed by a real user row in the local database, so onboarding, RPC calls, account deletion, and sign-out behave identically to Google sign-in. Local dev auth is isolated to the dev Worker entrypoint (`apps/server/src/index.dev.ts`) and Vite dev builds (`import.meta.env.DEV`), so it is excluded from production bundles and `pnpm run deploy` aborts if `DEV_AUTH_ENABLED=true`.
+
 ### Phone and PWA testing
 
 Set `DEV_PUBLIC_ORIGIN` to the HTTPS origin you open on your phone, for example `https://your-machine.your-tailnet.ts.net:8083`. Set it in `apps/server/.env.local`, or pass it when starting development.

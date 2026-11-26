@@ -1,9 +1,11 @@
 import { Button } from "@mostly/ui/components/button";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 
 import { ModeToggle } from "@/components/mode-toggle";
 import { authClient, signInWithGoogle } from "@/lib/auth-client";
+
+const DevSignIn = import.meta.env.DEV ? lazy(() => import("@/components/dev-sign-in")) : null;
 
 const LandingPage = () => {
   const { error: callbackError } = Route.useSearch();
@@ -18,16 +20,11 @@ const LandingPage = () => {
       await signInWithGoogle();
     } catch (error_) {
       setOpening(false);
-      setError(
-        error_ instanceof Error
-          ? error_.message
-          : "Could not sign in with Google."
-      );
+      setError(error_ instanceof Error ? error_.message : "Could not sign in with Google.");
     }
   };
 
-  const message =
-    error ?? (callbackError ? "Sign-in didn't complete. Try again." : null);
+  const message = error ?? (callbackError ? "Sign-in didn't complete. Try again." : null);
 
   return (
     <div className="grid min-h-svh justify-items-center pt-[max(var(--gutter),env(safe-area-inset-top))] pr-[max(var(--gutter),env(safe-area-inset-right))] pb-[max(var(--gutter),env(safe-area-inset-bottom))] pl-[max(var(--gutter),env(safe-area-inset-left))] [--gutter:clamp(0.75rem,3vw,2.5rem)]">
@@ -44,12 +41,10 @@ const LandingPage = () => {
         <main className="grid grid-rows-[1fr_auto] justify-items-center text-center">
           <div className="self-center py-10 sm:py-14">
             <h1 className="text-[clamp(1.875rem,7.6vw,7rem)] leading-[0.99] font-black tracking-[-0.055em] wrap-anywhere uppercase">
-              A quiet record{" "}
-              <span className="text-primary block">of what you did.</span>
+              A quiet record <span className="text-primary block">of what you did.</span>
             </h1>
             <p className="mx-auto mt-5 max-w-[32ch] text-base leading-relaxed text-[color-mix(in_srgb,var(--muted-foreground),var(--foreground)_18%)] sm:mt-7 sm:text-lg">
-              Track your goals, log your sessions, and see your progress over
-              time.
+              Track your goals, log your sessions, and see your progress over time.
             </p>
           </div>
 
@@ -71,6 +66,11 @@ const LandingPage = () => {
               />
               {opening ? "Opening Google…" : "Get Started"}
             </Button>
+            {DevSignIn ? (
+              <Suspense fallback={null}>
+                <DevSignIn disabled={opening} onError={setError} />
+              </Suspense>
+            ) : null}
             {message ? (
               <p role="alert" className="text-destructive text-sm">
                 {message}
