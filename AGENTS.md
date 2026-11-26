@@ -139,3 +139,7 @@ Defaults: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `w
 ### Domain docs
 
 Multi-context: root `GLOSSARY-MAP.md` points to one `GLOSSARY.md` per context. See `docs/agents/domain.md`.
+
+### Local development auth
+
+Start local dev with `DEV_AUTH_ENABLED=true pnpm run dev` (optionally overriding `DEV_AUTH_EMAIL` and `DEV_AUTH_NAME` in `apps/server/.env.local` or env vars) to bypass Google OAuth without human intervention. Click the `Continue as <name>` button (`data-testid="dev-sign-in-button"`) on `/` or `POST http://localhost:3003/api/auth/dev/sign-in` (`Content-Type: application/json`, body `{}`) to receive a real Better Auth session cookie.

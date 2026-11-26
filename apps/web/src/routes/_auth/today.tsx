@@ -26,6 +26,21 @@ import { client, orpc } from "@/utils/orpc";
 
 const UNDO_MS = 5000;
 
+// Reuse results that arrive between the route guard and the first render.
+const STARTUP_STALE_TIME_MS = 5000;
+const settingsOptions = () => ({
+  ...orpc.settings.get.queryOptions({
+    input: { timeZone: detectedTimeZone() },
+  }),
+  staleTime: STARTUP_STALE_TIME_MS,
+  meta: { suppressErrorToast: true },
+});
+const goalsOptions = {
+  ...orpc.goals.list.queryOptions(),
+  staleTime: STARTUP_STALE_TIME_MS,
+  meta: { suppressErrorToast: true },
+};
+
 const TodayPage = () => {
   const [now, setNow] = useState(() => new Date());
   const cache = useMemo<TodayCache>(() => readTodayCache(), []);
@@ -62,16 +77,8 @@ const TodayPage = () => {
     []
   );
 
-  const settingsQuery = useQuery({
-    ...orpc.settings.get.queryOptions({
-      input: { timeZone: detectedTimeZone() },
-    }),
-    meta: { suppressErrorToast: true },
-  });
-  const goalsQuery = useQuery({
-    ...orpc.goals.list.queryOptions(),
-    meta: { suppressErrorToast: true },
-  });
+  const settingsQuery = useQuery(settingsOptions());
+  const goalsQuery = useQuery(goalsOptions);
 
   const history = settingsQuery.data?.history ?? cache.settings;
   const resolved = useMemo(
@@ -274,10 +281,25 @@ const TodayPage = () => {
 };
 
 export const Route = createFileRoute("/_auth/today")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context, preload }) => {
+    const startTodayQueries = context.session && !preload;
+    if (startTodayQueries) {
+      void context.queryClient.prefetchQuery(goalsOptions);
+    }
     const status = await client.onboarding.status().catch(() => null);
     if (status && needsOnboarding(status.completed)) {
+      if (startTodayQueries) {
+        // Onboarding can create goals before this prefetched result goes stale.
+        context.queryClient.removeQueries({
+          queryKey: goalsOptions.queryKey,
+          exact: true,
+        });
+      }
       throw redirect({ to: "/onboarding" });
+    }
+    // The settings endpoint can seed a time zone, so wait for onboarding first.
+    if (startTodayQueries) {
+      void context.queryClient.prefetchQuery(settingsOptions());
     }
   },
   component: TodayPage,

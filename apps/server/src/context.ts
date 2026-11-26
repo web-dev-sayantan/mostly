@@ -1,18 +1,23 @@
 import type { Context as ApiContext } from "@mostly/api/context";
 import { pushConfigFromEnv } from "@mostly/api/push";
+import type { AuthInstance } from "@mostly/auth";
+import type { Database } from "@mostly/db";
 import type { Context as HonoContext } from "hono";
-
-import { ENV } from "./env.server";
-import { createAuth, getDb } from "./services";
 
 export interface CreateContextOptions {
   context: HonoContext;
+  env: Env;
+  createAuth: (database?: Database) => Promise<AuthInstance>;
+  getDb: () => Database;
 }
 
 export const createContext = async ({
   context,
+  env,
+  createAuth,
+  getDb,
 }: CreateContextOptions): Promise<ApiContext> => {
-  const db = await getDb();
+  const db = getDb();
   const auth = await createAuth(db);
   const session = await auth.api.getSession({
     headers: context.req.raw.headers,
@@ -21,7 +26,7 @@ export const createContext = async ({
     db,
     session,
     now: () => new Date(),
-    push: pushConfigFromEnv(ENV),
+    push: pushConfigFromEnv(env),
   };
 };
 

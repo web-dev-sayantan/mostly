@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -b ../../packages/api && vp build",
+    "build": "tsc -b ../../packages/api && NODE_ENV=production vp build",
     "serve": "vp preview",
     "start": "vp dev",
-    "check-types": "tsc -b ../../packages/api && vp build && tsc --noEmit",
+    "check-types": "tsc -b ../../packages/api && NODE_ENV=production vp build && tsc --noEmit",
     "generate-pwa-assets": "pwa-assets-generator",
     "dev:bare": "vp dev",
     "env:generate": "varlock codegen"
@@ -24,7 +24,6 @@
     "@tanstack/react-router": "^1.170.44",
     "better-auth": "catalog:",
     "lucide-react": "^1.56.0",
-    "next-themes": "catalog:",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "sonner": "catalog:",
@@ -44,6 +43,6 @@
     "postcss": "^8.5.30",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0"
+    "vite": "catalog:"
   }
 }

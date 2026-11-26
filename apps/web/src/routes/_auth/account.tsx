@@ -1,6 +1,6 @@
 import { Button } from "@mostly/ui/components/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,7 +9,6 @@ import { ReminderSettings } from "@/components/account-reminder";
 import { AccountSection } from "@/components/account-section";
 import { useTheme } from "@/components/theme-provider";
 import { APP_VERSION, SOURCE_URL } from "@/lib/app-info";
-import { authClient } from "@/lib/auth-client";
 import { IosInstallInstructions } from "@/lib/install/install-prompt";
 import {
   detectedTimeZone,
@@ -30,12 +29,12 @@ const themes = [
 ] as const;
 
 const Profile = () => {
-  const { data: session, isPending } = authClient.useSession();
+  const { session } = useRouteContext({ from: "/_auth" });
 
-  if (isPending || !session) {
+  if (!session) {
     return (
       <AccountSection id="profile" title="Profile">
-        <p className="text-muted-foreground text-sm">Loading profile.</p>
+        <p className="text-muted-foreground text-sm">Profile unavailable.</p>
       </AccountSection>
     );
   }

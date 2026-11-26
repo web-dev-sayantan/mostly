@@ -45,13 +45,35 @@ pnpm run db:migrate
 pnpm run dev
 ```
 
-Open [http://localhost:3003](http://localhost:3003). Alchemy starts Vite on port `3003` and the API Worker on port `3004`. The browser sends `/api` and `/rpc` requests through Vite, so sign-in and application requests share one browser origin. `BETTER_AUTH_URL` and `CORS_ORIGIN` default to `http://localhost:3003` during development. Explicit values in env files take precedence.
+Open [http://localhost:3003](http://localhost:3003). Alchemy starts Vite on port `3003` and the API Worker on port `4003`. The browser sends `/api` and `/rpc` requests through Vite, so sign-in and application requests share one browser origin. `BETTER_AUTH_URL` and `CORS_ORIGIN` default to `http://localhost:3003` during development. Explicit values in env files take precedence.
 
 Development state is stored locally under `packages/infra/.alchemy`. Local app startup uses Alchemy's local Cloudflare providers and needs no Cloudflare profile. Deployment uses the configured Cloudflare state store and provider credentials. Existing cloud-backed development state is retained when switching to this local state store.
 
-Ports `3003` and `3004` are fixed because the proxy and registered OAuth callback depend on them. Startup reports a port conflict instead of silently moving to another port.
+Ports `3003` and `4003` are fixed because the proxy and registered OAuth callback depend on them. Startup reports a port conflict instead of silently moving to another port.
 
 For separate frontend and backend terminals, run `pnpm run dev:server` followed by `pnpm run dev:web`. The frontend command starts bare Vite and uses the same API proxy.
+
+### Local development sign-in
+
+To test locally without Google OAuth (for example, in automated or agent runs), enable the local development account in `apps/server/.env.local` or pass it when starting development:
+
+```bash
+DEV_AUTH_ENABLED=true pnpm run dev
+```
+
+Configure the local account identity through the Varlock server config (`apps/server/.env.local` or shell env):
+
+- `DEV_AUTH_ENABLED=true` (defaults to `false`)
+- `DEV_AUTH_EMAIL=dev@mostly.local` (default)
+- `DEV_AUTH_NAME="Local Dev"` (default)
+
+When `DEV_AUTH_ENABLED=true` in development, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are not required. Sign in either by clicking the local dev button on `/` or via HTTP:
+
+```bash
+curl -c cookies.txt -X POST -H "Content-Type: application/json" -d '{}' http://localhost:3003/api/auth/dev/sign-in
+```
+
+This issues a normal Better Auth session cookie backed by a real user row in the local database, so onboarding, RPC calls, account deletion, and sign-out behave identically to Google sign-in. Local dev auth is isolated to the dev Worker entrypoint (`apps/server/src/index.dev.ts`) and Vite dev builds (`import.meta.env.DEV`), so it is excluded from production bundles and `pnpm run deploy` aborts if `DEV_AUTH_ENABLED=true`.
 
 ### Phone and PWA testing
 
@@ -72,6 +94,12 @@ DEV_PWA=true pnpm run dev
 ```
 
 If an earlier dev session registered a service worker, unregister it in browser developer tools once. Production builds always include the service worker.
+
+### Lighthouse testing
+
+Run Lighthouse against the deployed app or a production build served with `pnpm --filter web serve`. Use a clean Chrome profile with extensions disabled, then sign in before auditing `/today`. For local preview, build with `pnpm --filter web build` and configure the built app and auth server for the preview origin before signing in.
+
+TanStack Devtools are opt-in during development. Start the app with `VITE_DEVTOOLS=true pnpm run dev` to show the overlays.
 
 ## UI Customization
 

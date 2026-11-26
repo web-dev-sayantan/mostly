@@ -1,12 +1,6 @@
-import { Toaster } from "@mostly/ui/components/sonner";
 import type { QueryClient } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import {
-  HeadContent,
-  Outlet,
-  createRootRouteWithContext,
-} from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
+import { Suspense, lazy } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import type { orpc } from "@/utils/orpc";
@@ -18,44 +12,22 @@ export interface RouterAppContext {
   queryClient: QueryClient;
 }
 
+const Devtools =
+  import.meta.env.DEV && import.meta.env.VITE_DEVTOOLS === "true"
+    ? lazy(() => import("@/components/devtools"))
+    : null;
+
+const RootComponent = () => (
+  <ThemeProvider>
+    <Outlet />
+    {Devtools ? (
+      <Suspense fallback={null}>
+        <Devtools />
+      </Suspense>
+    ) : null}
+  </ThemeProvider>
+);
+
 export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
-  head: () => ({
-    meta: [
-      {
-        title: "mostly",
-      },
-      {
-        name: "description",
-        content: "A quiet record of what you did.",
-      },
-    ],
-    links: [
-      {
-        rel: "icon",
-        href: "/icon.svg",
-        type: "image/svg+xml",
-      },
-    ],
-  }),
 });
-
-function RootComponent() {
-  return (
-    <>
-      <HeadContent />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-        storageKey="mostly-theme"
-      >
-        <Outlet />
-        <Toaster richColors />
-      </ThemeProvider>
-      <TanStackRouterDevtools position="bottom-left" />
-      <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
-    </>
-  );
-}

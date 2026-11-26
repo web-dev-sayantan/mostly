@@ -7,7 +7,7 @@ allowBuilds:
   msgpackr-extract: true
   workerd: true
 overrides:
-  vite@*: npm:@voidzero-dev/vite-plus-core@1.1.0
+  vite@*: 'catalog:'
 catalog:
   zod: ^4.6.7
   typescript: ^6.0.3
@@ -18,11 +18,12 @@ catalog:
   "@orpc/openapi": ^1.15.6
   "@orpc/zod": ^1.15.6
   better-auth: ~1.7.20
-  next-themes: ^0.4.6
   sonner: ^2.0.8
   "@orpc/client": ^1.15.6
   tailwindcss: ^4.3.3
   drizzle-orm: 1.0.0-rc.5
+  vite: npm:@voidzero-dev/vite-plus-core@8.3.8000
+  vite-plus: 1.7.0
 permissions:
   "@tanstack/react-router":
     skills: true
@@ -56,3 +57,13 @@ minimumReleaseAgeExclude:
   - "@better-auth/prisma-adapter@1.7.20"
   - "@better-auth/telemetry@1.7.20"
   - better-auth@1.7.20
+  - "@voidzero-dev/vite-plus-core@8.3.8000"
+  - "@voidzero-dev/vite-plus-darwin-arm64@1.7.0"
+  - "@voidzero-dev/vite-plus-darwin-x64@1.7.0"
+  - "@voidzero-dev/vite-plus-linux-arm64-gnu@1.7.0"
+  - "@voidzero-dev/vite-plus-linux-arm64-musl@1.7.0"
+  - "@voidzero-dev/vite-plus-linux-x64-gnu@1.7.0"
+  - "@voidzero-dev/vite-plus-linux-x64-musl@1.7.0"
+  - "@voidzero-dev/vite-plus-win32-arm64-msvc@1.7.0"
+  - "@voidzero-dev/vite-plus-win32-x64-msvc@1.7.0"
+  - vite-plus@1.7.0

@@ -20,11 +20,12 @@ export default defineConfig({
         /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/u,
       ],
     },
+    host: "127.0.0.1",
     port: 3003,
     strictPort: true,
     proxy: {
-      "/api": "http://localhost:3004",
-      "/rpc": "http://localhost:3004",
+      "/api": "http://localhost:4003",
+      "/rpc": "http://localhost:4003",
     },
   },
   resolve: {
@@ -65,7 +66,7 @@ export default defineConfig({
           },
         ],
       },
-      pwaAssets: { disabled: false, config: true },
+      pwaAssets: { disabled: false, config: true, injectThemeColor: false },
       devOptions: { enabled: process.env.DEV_PWA === "true" },
     }),
   ],

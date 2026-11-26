@@ -4,6 +4,7 @@ import AppShell from "@/components/app-shell";
 import { authClient } from "@/lib/auth-client";
 import { bindOfflineUser } from "@/lib/offline";
 import { OFFLINE_STORAGE_KEYS } from "@/lib/offline/store";
+import { clearTodayCache } from "@/lib/today-cache";
 
 const hasKnownSession = (): boolean => {
   try {
@@ -29,7 +30,7 @@ const AuthLayout = () => (
 
 export const Route = createFileRoute("/_auth")({
   component: AuthLayout,
-  beforeLoad: async () => {
+  beforeLoad: async ({ context }) => {
     const knownSession = hasKnownSession();
     const online = typeof navigator === "undefined" ? true : navigator.onLine;
     let networkFailed = false;
@@ -42,14 +43,17 @@ export const Route = createFileRoute("/_auth")({
       // Local cache belongs to one account. A deleted account returning as a new
       // user id drops its old queue here, before the next replay. Remember the
       // shell after the wipe so switching accounts keeps offline opens alive.
-      bindOfflineUser(session.data.user.id);
+      if (bindOfflineUser(session.data.user.id)) {
+        clearTodayCache();
+        context.queryClient.clear();
+      }
       rememberSession();
-      return { session };
+      return { session: session.data };
     }
 
     // The cached shell and local sessions stay available with no network.
     if (knownSession && (!online || networkFailed)) {
-      return;
+      return { session: null };
     }
 
     throw redirect({ to: "/" });
